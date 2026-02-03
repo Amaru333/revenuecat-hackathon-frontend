@@ -1,0 +1,335 @@
+import React, { useState } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, router } from 'expo-router';
+import { Recipe } from '@/services/recipeService';
+
+export default function RecipeResultScreen() {
+  const params = useLocalSearchParams();
+  
+  // Parse the recipe data from URL params
+  const recipe: Recipe = params.recipe ? JSON.parse(params.recipe as string) : null;
+  
+  // State for ingredient checklist
+  const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
+
+  const toggleIngredient = (index: number) => {
+    const newChecked = new Set(checkedIngredients);
+    if (newChecked.has(index)) {
+      newChecked.delete(index);
+    } else {
+      newChecked.add(index);
+    }
+    setCheckedIngredients(newChecked);
+  };
+
+  if (!recipe) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>No recipe data found</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.recipeResultsContainer}>
+        <View style={styles.recipeHeader}>
+          <Text style={styles.recipeName}>{recipe.name}</Text>
+          <Text style={styles.recipeDescription}>{recipe.description}</Text>
+        </View>
+
+        {/* Recipe Info */}
+        <View style={styles.recipeInfoRow}>
+          <View style={styles.infoBox}>
+            <Ionicons name="time-outline" size={20} color="#666" />
+            <Text style={styles.infoBoxLabel}>Prep</Text>
+            <Text style={styles.infoBoxValue}>{recipe.prepTime}</Text>
+          </View>
+          <View style={styles.infoBox}>
+            <Ionicons name="flame-outline" size={20} color="#666" />
+            <Text style={styles.infoBoxLabel}>Cook</Text>
+            <Text style={styles.infoBoxValue}>{recipe.cookTime}</Text>
+          </View>
+          <View style={styles.infoBox}>
+            <Ionicons name="people-outline" size={20} color="#666" />
+            <Text style={styles.infoBoxLabel}>Serves</Text>
+            <Text style={styles.infoBoxValue}>{recipe.servings}</Text>
+          </View>
+        </View>
+
+        {/* Ingredients */}
+        <View style={styles.recipeSection}>
+          <Text style={styles.sectionTitle}>Ingredients</Text>
+          {recipe.ingredients.map((ingredient, index) => {
+            const isChecked = checkedIngredients.has(index);
+            // Handle both string and object formats
+            const ingredientText = typeof ingredient === 'string' 
+              ? ingredient 
+              : `${(ingredient as any).amount || ''} ${(ingredient as any).item || ''}`.trim();
+            
+            return (
+              <TouchableOpacity
+                key={index}
+                style={styles.ingredientItem}
+                onPress={() => toggleIngredient(index)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={isChecked ? "checkmark-circle" : "ellipse-outline"}
+                  size={20}
+                  color={isChecked ? "#4CAF50" : "#CCC"}
+                />
+                <Text
+                  style={[
+                    styles.ingredientText,
+                    isChecked && styles.ingredientTextChecked
+                  ]}
+                >
+                  {ingredientText}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Instructions */}
+        <View style={styles.recipeSection}>
+          <Text style={styles.sectionTitle}>Instructions</Text>
+          {recipe.instructions.map((instruction, index) => (
+            <View key={index} style={styles.instructionItem}>
+              <View style={styles.stepNumberBadge}>
+                <Text style={styles.stepNumberText}>{index + 1}</Text>
+              </View>
+              <Text style={styles.instructionText}>{instruction}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Nutrition */}
+        {recipe.nutrition && (
+          <View style={styles.recipeSection}>
+            <Text style={styles.sectionTitle}>Nutrition (per serving)</Text>
+            <View style={styles.nutritionGrid}>
+              {recipe.nutrition.calories != null && (
+                <View style={styles.nutritionBox}>
+                  <Text style={styles.nutritionValue}>{String(recipe.nutrition.calories)}</Text>
+                  <Text style={styles.nutritionLabel}>Calories</Text>
+                </View>
+              )}
+              {recipe.nutrition.protein != null && recipe.nutrition.protein !== '' && (
+                <View style={styles.nutritionBox}>
+                  <Text style={styles.nutritionValue}>{String(recipe.nutrition.protein)}</Text>
+                  <Text style={styles.nutritionLabel}>Protein</Text>
+                </View>
+              )}
+              {recipe.nutrition.carbs != null && recipe.nutrition.carbs !== '' && (
+                <View style={styles.nutritionBox}>
+                  <Text style={styles.nutritionValue}>{String(recipe.nutrition.carbs)}</Text>
+                  <Text style={styles.nutritionLabel}>Carbs</Text>
+                </View>
+              )}
+              {recipe.nutrition.fat != null && recipe.nutrition.fat !== '' && (
+                <View style={styles.nutritionBox}>
+                  <Text style={styles.nutritionValue}>{String(recipe.nutrition.fat)}</Text>
+                  <Text style={styles.nutritionLabel}>Fat</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Try Another Button */}
+        <TouchableOpacity
+          style={styles.tryAnotherButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="add-circle-outline" size={22} color="#000" />
+          <Text style={styles.tryAnotherText}>Try Another</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  errorText: {
+    fontSize: 18,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 100,
+    fontFamily: 'Poppins_400Regular',
+  },
+  backButton: {
+    marginTop: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: '#000',
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
+  backButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  recipeResultsContainer: {
+    backgroundColor: '#FFF',
+    margin: 20,
+    borderRadius: 16,
+    padding: 20,
+  },
+  recipeHeader: {
+    marginBottom: 20,
+  },
+  recipeName: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#000',
+    fontFamily: 'Poppins_600SemiBold',
+    marginBottom: 8,
+  },
+  recipeDescription: {
+    fontSize: 15,
+    color: '#666',
+    fontFamily: 'Poppins_400Regular',
+    lineHeight: 22,
+  },
+  recipeInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 24,
+    paddingVertical: 16,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+  },
+  infoBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center',
+    gap: 4,
+    flex: 1,
+  },
+  infoBoxLabel: {
+    fontSize: 12,
+    color: '#999',
+    fontFamily: 'Poppins_400Regular',
+  },
+  infoBoxValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#000',
+    fontFamily: 'Poppins_600SemiBold',
+    textAlign: 'center',
+  },
+  recipeSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
+    fontFamily: 'Poppins_600SemiBold',
+    marginBottom: 16,
+  },
+  ingredientItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 12,
+  },
+  ingredientText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#333',
+    fontFamily: 'Poppins_400Regular',
+    lineHeight: 22,
+  },
+  ingredientTextChecked: {
+    textDecorationLine: 'line-through',
+    color: '#999',
+    opacity: 0.6,
+  },
+  instructionItem: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  stepNumberBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepNumberText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  instructionText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#333',
+    fontFamily: 'Poppins_400Regular',
+    lineHeight: 22,
+  },
+  nutritionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  nutritionBox: {
+    flex: 1,
+    minWidth: '45%',
+    alignItems: 'center',
+    paddingVertical: 16,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+  },
+  nutritionValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
+    fontFamily: 'Poppins_600SemiBold',
+    marginBottom: 4,
+  },
+  nutritionLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  tryAnotherButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  tryAnotherText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+});

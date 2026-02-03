@@ -5,49 +5,72 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+// Branding colors from shared/branding.js
+const tintColorLight = '#FF6B35'; // Primary orange
+const tintColorDark = '#FF8C61'; // Lighter orange
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: '#2C3E50',
+    background: '#F5F5F5',
+    surface: '#FFFFFF',
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    primary: '#FF6B35',
+    primaryDark: '#E85A2A',
+    primaryLight: '#FF8C61',
+    secondary: '#4ECDC4',
+    accent: '#FFE66D',
+    icon: '#7F8C8D',
+    tabIconDefault: '#7F8C8D',
     tabIconSelected: tintColorLight,
+    success: '#27AE60',
+    error: '#E74C3C',
+    warning: '#F39C12',
+    info: '#3498DB',
   },
   dark: {
     text: '#ECEDEE',
-    background: '#151718',
+    background: '#1A1A1A',
+    surface: '#2D2D2D',
     tint: tintColorDark,
+    primary: '#FF8C61',
+    primaryDark: '#FF6B35',
+    primaryLight: '#FFB094',
+    secondary: '#4ECDC4',
+    accent: '#FFE66D',
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
+    success: '#27AE60',
+    error: '#E74C3C',
+    warning: '#F39C12',
+    info: '#3498DB',
   },
 };
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+    regular: 'Poppins_400Regular',
+    medium: 'Poppins_500Medium',
+    semiBold: 'Poppins_600SemiBold',
+    bold: 'Poppins_700Bold',
+  },
+  android: {
+    regular: 'Poppins_400Regular',
+    medium: 'Poppins_500Medium',
+    semiBold: 'Poppins_600SemiBold',
+    bold: 'Poppins_700Bold',
   },
   default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
+    regular: 'Poppins_400Regular',
+    medium: 'Poppins_500Medium',
+    semiBold: 'Poppins_600SemiBold',
+    bold: 'Poppins_700Bold',
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    regular: 'Poppins, sans-serif',
+    medium: 'Poppins, sans-serif',
+    semiBold: 'Poppins, sans-serif',
+    bold: 'Poppins, sans-serif',
   },
 });
