@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { CustomerInfo } from 'react-native-purchases';
+import { Platform } from 'react-native';
 import RevenueCatUI from 'react-native-purchases-ui';
 import {
   getCustomerInfo,
@@ -56,6 +57,12 @@ export const RevenueCatProvider: React.FC<RevenueCatProviderProps> = ({ children
 
   // Initialize and fetch customer info
   const refreshCustomerInfo = async () => {
+    // Skip on iOS (Android only)
+    if (Platform.OS === 'ios') {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       
@@ -84,6 +91,12 @@ export const RevenueCatProvider: React.FC<RevenueCatProviderProps> = ({ children
 
   // Show paywall
   const showPaywall = async () => {
+    // Skip on iOS
+    if (Platform.OS === 'ios') {
+      console.log('ℹ️ Paywall not available on iOS (Android only)');
+      return;
+    }
+
     try {
       const paywallResult = await RevenueCatUI.presentPaywall();
       
@@ -99,6 +112,12 @@ export const RevenueCatProvider: React.FC<RevenueCatProviderProps> = ({ children
 
   // Show customer center
   const showCustomerCenter = async () => {
+    // Skip on iOS
+    if (Platform.OS === 'ios') {
+      console.log('ℹ️ Customer center not available on iOS (Android only)');
+      return;
+    }
+
     try {
       await RevenueCatUI.presentCustomerCenter();
       // Refresh after customer center closes

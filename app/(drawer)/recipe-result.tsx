@@ -1,23 +1,101 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
-import { Recipe } from '@/services/recipeService';
+import { Recipe, saveRecipeFromSuggestion, deleteRecipe, toggleFavorite } from '@/services/recipeService';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function RecipeResultScreen() {
   const params = useLocalSearchParams();
+  const { token } = useAuth();
   
   // Parse the recipe data from URL params
-  const recipe: Recipe = params.recipe ? JSON.parse(params.recipe as string) : null;
+  const initialRecipe: Recipe = params.recipe ? JSON.parse(params.recipe as string) : null;
+  
+  // State for the recipe (may be updated with saved ID)
+  const [recipe, setRecipe] = useState<Recipe>(initialRecipe);
   
   // State for ingredient checklist
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
+  const [isSaving, setIsSaving] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(initialRecipe?.isFavorite || false);
+
+  // Auto-save recipe if it's from suggestions (negative ID)
+  useEffect(() => {
+    const saveRecipeIfNeeded = async () => {
+      if (!recipe || !token) return;
+      
+      const recipeId = parseInt(recipe.id);
+      // Check if this is a suggestion (negative ID) and hasn't been saved yet
+      if (recipeId < 0 && !isSaving) {
+        setIsSaving(true);
+        try {
+          console.log('Saving recipe from suggestion:', recipe.name);
+          const savedRecipe = await saveRecipeFromSuggestion(recipe, token);
+          console.log('Recipe saved with ID:', savedRecipe.id);
+          // Update recipe with the new database ID
+          setRecipe(savedRecipe);
+        } catch (error) {
+          console.error('Failed to save recipe:', error);
+          // Continue showing the recipe even if save fails
+        } finally {
+          setIsSaving(false);
+        }
+      }
+    };
+
+    saveRecipeIfNeeded();
+  }, [recipe?.id, token]);
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Recipe',
+      'Are you sure you want to delete this recipe? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!token || !recipe) return;
+            
+            try {
+              await deleteRecipe(recipe.id, token);
+              router.back();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete recipe. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!token || !recipe) return;
+    
+    // Optimistic update
+    setIsFavorite(!isFavorite);
+    
+    try {
+      const newFavoriteStatus = await toggleFavorite(recipe.id, token);
+      setIsFavorite(newFavoriteStatus);
+    } catch (error) {
+      // Revert on error
+      setIsFavorite(!isFavorite);
+      Alert.alert('Error', 'Failed to update favorite status. Please try again.');
+    }
+  };
 
   const toggleIngredient = (index: number) => {
     const newChecked = new Set(checkedIngredients);
@@ -49,6 +127,33 @@ export default function RecipeResultScreen() {
         <View style={styles.recipeHeader}>
           <Text style={styles.recipeName}>{recipe.name}</Text>
           <Text style={styles.recipeDescription}>{recipe.description}</Text>
+          
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.favoriteButton}
+              onPress={handleToggleFavorite}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={isFavorite ? "heart" : "heart-outline"}
+                size={24}
+                color={isFavorite ? "#FF3B30" : "#666"}
+              />
+              <Text style={[styles.actionButtonText, isFavorite && styles.favoriteText]}>
+                {isFavorite ? 'Favorited' : 'Favorite'}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDelete}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="trash-outline" size={24} color="#FF3B30" />
+              <Text style={styles.deleteButtonText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Recipe Info */}
@@ -210,6 +315,48 @@ const styles = StyleSheet.create({
     color: '#666',
     fontFamily: 'Poppins_400Regular',
     lineHeight: 22,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  favoriteButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+  },
+  deleteButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FF3B30',
+  },
+  actionButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#666',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  favoriteText: {
+    color: '#FF3B30',
+  },
+  deleteButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FF3B30',
+    fontFamily: 'Poppins_600SemiBold',
   },
   recipeInfoRow: {
     flexDirection: 'row',

@@ -7,12 +7,27 @@ import { Platform } from 'react-native';
  */
 export const initializeRevenueCat = async (): Promise<void> => {
   try {
+    // Only initialize on Android
+    if (Platform.OS === 'ios') {
+      console.log('ℹ️ RevenueCat: Skipping iOS initialization (Android only)');
+      return;
+    }
+
+    // Get Android API key
+    const apiKey = REVENUECAT_CONFIG.apiKeys.android;
+
+    // Check if API key is still placeholder
+    if (apiKey.includes('XXXXXXX')) {
+      console.warn('⚠️ RevenueCat API key not configured. Please update config/revenuecat.ts with your actual API key.');
+      return;
+    }
+
     // Configure SDK with API key
     await Purchases.configure({
-      apiKey: REVENUECAT_CONFIG.apiKey,
+      apiKey: apiKey,
     });
 
-    console.log('✅ RevenueCat SDK initialized successfully');
+    console.log('✅ RevenueCat SDK initialized successfully (Android)');
   } catch (error) {
     console.error('❌ Failed to initialize RevenueCat:', error);
     throw error;

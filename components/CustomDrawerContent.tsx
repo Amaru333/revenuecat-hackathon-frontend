@@ -33,6 +33,18 @@ export default function CustomDrawerContent(props: DrawerContentComponentProps) 
       activeIcon: 'restaurant',
     },
     {
+      name: 'Inventory',
+      icon: 'basket-outline',
+      route: '/(drawer)/inventory',
+      activeIcon: 'basket',
+    },
+    {
+      name: 'Favorites',
+      icon: 'heart-outline',
+      route: '/(drawer)/favorites',
+      activeIcon: 'heart',
+    },
+    {
       name: 'Profile',
       icon: 'person-outline',
       route: '/(drawer)/profile',

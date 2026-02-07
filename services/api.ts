@@ -113,4 +113,12 @@ export default {
   getUserRecipes,
   getAllRecipes,
   healthCheck,
+  // Export axios instance for direct use
+  get: api.get.bind(api),
+  post: api.post.bind(api),
+  put: api.put.bind(api),
+  delete: api.delete.bind(api),
 };
+
+// Also export the axios instance directly
+export { api };

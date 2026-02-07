@@ -5,6 +5,7 @@ import type { User, SignupData, LoginData } from '../services/authService';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  token: string | null;
   signup: (data: SignupData) => Promise<void>;
   login: (data: LoginData) => Promise<void>;
   logout: () => Promise<void>;
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
 
   // Load user on mount
   useEffect(() => {
@@ -26,7 +28,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function loadUser() {
     try {
       const storedUser = await authService.getStoredUser();
-      if (storedUser) {
+      const storedToken = await authService.getToken();
+      if (storedUser && storedToken) {
+        setToken(storedToken);
         // Verify token is still valid by fetching current user
         try {
           const currentUser = await authService.getMe();
@@ -35,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Token expired or invalid
           await authService.clearAuth();
           setUser(null);
+          setToken(null);
         }
       }
     } catch (error) {
@@ -48,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await authService.signup(data);
       setUser(response.user);
+      setToken(response.token);
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Signup failed');
     }
@@ -57,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await authService.login(data);
       setUser(response.user);
+      setToken(response.token);
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Login failed');
     }
@@ -66,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await authService.logout();
       setUser(null);
+      setToken(null);
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -94,6 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         loading,
+        token,
         signup,
         login,
         logout,

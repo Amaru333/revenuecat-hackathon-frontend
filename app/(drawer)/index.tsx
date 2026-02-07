@@ -13,12 +13,12 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { uploadMediaForRecipe } from '@/services/recipeService';
+import { uploadMediaForRecipe, generateRecipeFromText } from '@/services/recipeService';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function UploadScreen() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -192,19 +192,49 @@ export default function UploadScreen() {
   };
 
   // Handle text-based submit
-  const handleTextSubmit = () => {
+  const handleTextSubmit = async () => {
     if (!mealDescription.trim()) {
       Alert.alert('Empty Input', 'Please describe your meal or upload a photo/video.');
       return;
     }
     
-    // For now, show a message that text search is coming soon
-    // In the future, this could call a different API endpoint for text-based recipe search
-    Alert.alert(
-      'Text Search',
-      'Text-based recipe search is coming soon! For now, please upload a photo or video of your meal.',
-      [{ text: 'OK' }]
-    );
+    if (!token) {
+      Alert.alert('Authentication Required', 'Please log in to generate recipes.');
+      return;
+    }
+
+    console.log('🚀 Starting text-based recipe generation...', { description: mealDescription });
+    setIsUploading(true);
+    
+    try {
+      console.log('📤 Calling generateRecipeFromText API...');
+      const response = await generateRecipeFromText(mealDescription, token);
+      console.log('📥 API Response:', response);
+      
+      if (response.success && response.recipe) {
+        console.log('✅ Recipe received:', response.recipe.name);
+        
+        // Navigate to recipe results page using replace to ensure fresh state
+        router.replace({
+          pathname: '/(drawer)/recipe-result',
+          params: {
+            recipe: JSON.stringify(response.recipe),
+          },
+        });
+        
+        // Reset state
+        setMealDescription('');
+      } else {
+        console.log('❌ API returned error:', response.message);
+        Alert.alert('Error', response.message || 'Failed to generate recipe.');
+      }
+    } catch (error) {
+      console.error('💥 Text generation error:', error);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
+      setIsUploading(false);
+      console.log('✅ Text generation complete');
+    }
   };
 
   return (
@@ -226,6 +256,19 @@ export default function UploadScreen() {
         style={{ flexShrink: 0 }}
       >
         <View style={styles.inputContainer}>
+          {/* Suggestion Chip */}
+          <TouchableOpacity 
+            style={styles.suggestionChip}
+            onPress={() => router.push('/(drawer)/suggestions')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="bulb-outline" size={18} color="#666" />
+            <Text style={styles.suggestionChipText}>
+              Give me suggestions on what to prepare with my inventory items
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color="#666" />
+          </TouchableOpacity>
+
           {isUploading && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#000" />
@@ -268,6 +311,22 @@ export default function UploadScreen() {
 
 
 const styles = StyleSheet.create({
+  suggestionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F0F0',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    gap: 8,
+  },
+  suggestionChipText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#666',
+    fontFamily: 'Poppins_400Regular',
+  },
   uploadButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -64,6 +64,25 @@ export default function DrawerLayout() {
         }}
       />
       <Drawer.Screen
+        name="inventory"
+        options={{
+          drawerLabel: 'Inventory',
+        }}
+      />
+      <Drawer.Screen
+        name="favorites"
+        options={{
+          drawerLabel: 'Favorites',
+        }}
+      />
+      <Drawer.Screen
+        name="suggestions"
+        options={{
+          drawerLabel: 'Recipe Suggestions',
+          drawerItemStyle: { display: 'none' }, // Hidden from drawer, accessed via chip
+        }}
+      />
+      <Drawer.Screen
         name="profile"
         options={{
           drawerLabel: 'Profile',
@@ -73,6 +92,13 @@ export default function DrawerLayout() {
         name="recipe-result"
         options={{
           drawerLabel: 'Recipe Result',
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+      <Drawer.Screen
+        name="inventory-scan"
+        options={{
+          drawerLabel: 'Scan Inventory',
           drawerItemStyle: { display: 'none' },
         }}
       />
