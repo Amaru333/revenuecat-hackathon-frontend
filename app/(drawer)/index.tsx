@@ -24,19 +24,17 @@ export default function UploadScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [mealDescription, setMealDescription] = useState('');
 
-
-
   // Request permissions
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
       const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
       const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
+
       if (cameraStatus !== 'granted' || mediaStatus !== 'granted') {
         Alert.alert(
           'Permissions Required',
           'We need camera and photo library permissions to let you upload images.',
-          [{ text: 'OK' }]
+          [{ text: 'OK' }],
         );
         return false;
       }
@@ -61,7 +59,7 @@ export default function UploadScreen() {
         const uri = result.assets[0].uri;
         setSelectedMedia(uri);
         setMediaType('image');
-        
+
         // Auto-upload and analyze
         await handleUpload(uri, 'image');
       }
@@ -87,7 +85,7 @@ export default function UploadScreen() {
         const uri = result.assets[0].uri;
         setSelectedMedia(uri);
         setMediaType('image');
-        
+
         // Auto-upload and analyze
         await handleUpload(uri, 'image');
       }
@@ -112,7 +110,7 @@ export default function UploadScreen() {
         const uri = result.assets[0].uri;
         setSelectedMedia(uri);
         setMediaType('video');
-        
+
         // Auto-upload and analyze
         await handleUpload(uri, 'video');
       }
@@ -144,7 +142,7 @@ export default function UploadScreen() {
           style: 'cancel',
         },
       ],
-      { cancelable: true }
+      { cancelable: true },
     );
   };
 
@@ -152,20 +150,20 @@ export default function UploadScreen() {
   const handleUpload = async (mediaUri?: string, type?: 'image' | 'video') => {
     const uri = mediaUri || selectedMedia;
     const mediaTypeToUse = type || mediaType;
-    
+
     if (!uri || !mediaTypeToUse) return;
 
     console.log('🚀 Starting upload...', { uri: uri.substring(0, 50), type: mediaTypeToUse });
     setIsUploading(true);
-    
+
     try {
       console.log('📤 Calling uploadMediaForRecipe API...');
       const response = await uploadMediaForRecipe(uri, mediaTypeToUse, user?.id);
       console.log('📥 API Response:', response);
-      
+
       if (response.success && response.recipe) {
         console.log('✅ Recipe received:', response.recipe.name);
-        
+
         // Navigate to recipe results page
         router.push({
           pathname: '/(drawer)/recipe-result',
@@ -173,7 +171,7 @@ export default function UploadScreen() {
             recipe: JSON.stringify(response.recipe),
           },
         });
-        
+
         // Reset state
         setSelectedMedia(null);
         setMediaType(null);
@@ -197,7 +195,7 @@ export default function UploadScreen() {
       Alert.alert('Empty Input', 'Please describe your meal or upload a photo/video.');
       return;
     }
-    
+
     if (!token) {
       Alert.alert('Authentication Required', 'Please log in to generate recipes.');
       return;
@@ -205,15 +203,15 @@ export default function UploadScreen() {
 
     console.log('🚀 Starting text-based recipe generation...', { description: mealDescription });
     setIsUploading(true);
-    
+
     try {
       console.log('📤 Calling generateRecipeFromText API...');
       const response = await generateRecipeFromText(mealDescription, token);
       console.log('📥 API Response:', response);
-      
+
       if (response.success && response.recipe) {
         console.log('✅ Recipe received:', response.recipe.name);
-        
+
         // Navigate to recipe results page using replace to ensure fresh state
         router.replace({
           pathname: '/(drawer)/recipe-result',
@@ -221,7 +219,7 @@ export default function UploadScreen() {
             recipe: JSON.stringify(response.recipe),
           },
         });
-        
+
         // Reset state
         setMealDescription('');
       } else {
@@ -238,26 +236,26 @@ export default function UploadScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: "#F5F5F5" }]}>
+    <View style={[styles.container, { backgroundColor: '#F5F5F5' }]}>
       <View style={styles.imageContainer}>
         <View style={styles.imageWrapper}>
-          <Image 
-            source={require('@/assets/images/food.png')} 
+          <Image
+            source={require('@/assets/images/food.png')}
             style={styles.foodImage}
             resizeMode="contain"
           />
         </View>
         <Text style={styles.text}>Let's find out what you're eating!</Text>
       </View>
-      
-      <KeyboardAvoidingView 
+
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 119 : 0}
         style={{ flexShrink: 0 }}
       >
         <View style={styles.inputContainer}>
           {/* Suggestion Chip */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.suggestionChip}
             onPress={() => router.push('/(drawer)/suggestions')}
             activeOpacity={0.7}
@@ -275,9 +273,9 @@ export default function UploadScreen() {
               <Text style={styles.loadingText}>Analyzing your meal...</Text>
             </View>
           )}
-          
+
           <TextInput
-            placeholder="Describe your meal or upload a photo/video"
+            placeholder="Paste a video link (YouTube, Instagram, TikTok...) or describe your meal..."
             placeholderTextColor="#999"
             style={styles.input}
             value={mealDescription}
@@ -287,15 +285,15 @@ export default function UploadScreen() {
             editable={!isUploading}
           />
           <View style={styles.uploadButtonsContainer}>
-            <TouchableOpacity 
-              style={styles.uploadButton} 
+            <TouchableOpacity
+              style={styles.uploadButton}
               onPress={showUploadOptions}
               disabled={isUploading}
             >
               <Ionicons name="cloud-upload-outline" size={18} />
               <Text style={{ fontFamily: 'Poppins_400Regular' }}>Upload</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.uploadButton, { backgroundColor: '#000', width: 40 }]}
               onPress={handleTextSubmit}
               disabled={isUploading}
@@ -308,7 +306,6 @@ export default function UploadScreen() {
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   suggestionChip: {
@@ -362,7 +359,7 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 24,
     marginTop: 40,
-    width: '80%',  
+    width: '80%',
     textAlign: 'center',
     color: '#999',
     fontFamily: 'Poppins_400Regular',
@@ -373,9 +370,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  imageWrapper: {
-    
-  },
+  imageWrapper: {},
   foodImage: {
     width: 200,
     height: 200,
@@ -391,4 +386,3 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
   },
 });
-
