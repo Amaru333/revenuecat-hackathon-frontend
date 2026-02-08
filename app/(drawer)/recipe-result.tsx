@@ -256,6 +256,18 @@ export default function RecipeResultScreen() {
           </View>
         )}
 
+        {/* Start Cooking Button */}
+        <TouchableOpacity
+          style={styles.startCookingButton}
+          onPress={() => router.push({
+            pathname: '/(drawer)/cooking-mode',
+            params: { recipe: JSON.stringify(recipe) },
+          })}
+        >
+          <Ionicons name="restaurant" size={22} color="#FFF" />
+          <Text style={styles.startCookingText}>Start Cooking</Text>
+        </TouchableOpacity>
+
         {/* Try Another Button */}
         <TouchableOpacity
           style={styles.tryAnotherButton}
@@ -462,6 +474,22 @@ const styles = StyleSheet.create({
   nutritionLabel: {
     fontSize: 12,
     color: '#666',
+  },
+  startCookingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    backgroundColor: '#000',
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  startCookingText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
+    fontFamily: 'Poppins_600SemiBold',
   },
   tryAnotherButton: {
     flexDirection: 'row',
