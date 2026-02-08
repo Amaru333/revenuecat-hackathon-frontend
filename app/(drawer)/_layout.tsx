@@ -3,11 +3,21 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DrawerActions } from '@react-navigation/native';
-import { useNavigation } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import CustomDrawerContent from '@/components/CustomDrawerContent';
 
-// Custom header component
-function CustomHeader() {
+// Screens that should show a back arrow instead of hamburger
+const SUB_SCREENS = new Set([
+  'recipe-result',
+  'cooking-mode',
+  'suggestions',
+  'inventory-scan',
+  'paywall',
+  'customer-center',
+]);
+
+// Custom header with hamburger (top-level screens)
+function DrawerHeader() {
   const navigation = useNavigation();
 
   return (
@@ -17,6 +27,36 @@ function CustomHeader() {
         onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
       >
         <Ionicons name="menu" size={24} color="#000" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.iconButton}
+        onPress={() => navigation.navigate('profile' as never)}
+      >
+        <Ionicons name="person-outline" size={24} color="#000" />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// Custom header with back arrow (sub-screens)
+function BackHeader() {
+  const router = useRouter();
+  const navigation = useNavigation();
+
+  return (
+    <View style={styles.headerContainer}>
+      <TouchableOpacity
+        style={styles.iconButton}
+        onPress={() => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            navigation.navigate('index' as never);
+          }
+        }}
+      >
+        <Ionicons name="arrow-back" size={24} color="#000" />
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -46,7 +86,7 @@ export default function DrawerLayout() {
         },
         headerTintColor: '#000',
         headerTitle: '',
-        header: () => <CustomHeader />,
+        header: () => <DrawerHeader />,
         drawerActiveTintColor: '#000',
         drawerInactiveTintColor: '#666',
       }}
@@ -91,7 +131,8 @@ export default function DrawerLayout() {
         name="suggestions"
         options={{
           drawerLabel: 'Recipe Suggestions',
-          drawerItemStyle: { display: 'none' }, // Hidden from drawer, accessed via chip
+          drawerItemStyle: { display: 'none' },
+          header: () => <BackHeader />,
         }}
       />
       <Drawer.Screen
@@ -105,6 +146,7 @@ export default function DrawerLayout() {
         options={{
           drawerLabel: 'Recipe Result',
           drawerItemStyle: { display: 'none' },
+          header: () => <BackHeader />,
         }}
       />
       <Drawer.Screen
@@ -112,6 +154,7 @@ export default function DrawerLayout() {
         options={{
           drawerLabel: 'Scan Inventory',
           drawerItemStyle: { display: 'none' },
+          header: () => <BackHeader />,
         }}
       />
       <Drawer.Screen
@@ -119,6 +162,7 @@ export default function DrawerLayout() {
         options={{
           drawerLabel: 'Subscription',
           drawerItemStyle: { display: 'none' },
+          header: () => <BackHeader />,
         }}
       />
       <Drawer.Screen
@@ -126,6 +170,7 @@ export default function DrawerLayout() {
         options={{
           drawerLabel: 'Manage Subscription',
           drawerItemStyle: { display: 'none' },
+          header: () => <BackHeader />,
         }}
       />
       <Drawer.Screen
@@ -133,6 +178,7 @@ export default function DrawerLayout() {
         options={{
           drawerLabel: 'Cooking Mode',
           drawerItemStyle: { display: 'none' },
+          header: () => <BackHeader />,
         }}
       />
     </Drawer>
