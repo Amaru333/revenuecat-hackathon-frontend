@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,11 +6,13 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Recipe, saveRecipeFromSuggestion, deleteRecipe, toggleFavorite } from '@/services/recipeService';
 import { useAuth } from '@/contexts/AuthContext';
+import { getRecipeCookStats, logCook, CookStats } from '@/services/cookHistoryService';
 
 export default function RecipeResultScreen() {
   const params = useLocalSearchParams();
@@ -26,6 +28,10 @@ export default function RecipeResultScreen() {
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
   const [isFavorite, setIsFavorite] = useState(initialRecipe?.isFavorite || false);
+  
+  // Cook history state
+  const [cookStats, setCookStats] = useState<CookStats | null>(null);
+  const [isLoggingCook, setIsLoggingCook] = useState(false);
 
   // Auto-save recipe if it's from suggestions (negative ID)
   useEffect(() => {
@@ -53,6 +59,42 @@ export default function RecipeResultScreen() {
 
     saveRecipeIfNeeded();
   }, [recipe?.id, token]);
+
+  // Fetch cook stats
+  const fetchCookStats = useCallback(async () => {
+    if (!recipe?.id || !token) return;
+    const recipeId = Number(recipe.id);
+    if (recipeId <= 0) return; // Skip for unsaved recipes
+    
+    try {
+      const stats = await getRecipeCookStats(recipeId, token);
+      setCookStats(stats);
+    } catch (error) {
+      console.error('Failed to fetch cook stats:', error);
+    }
+  }, [recipe?.id, token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchCookStats();
+    }, [fetchCookStats])
+  );
+
+  const handleQuickLog = async () => {
+    if (!recipe?.id || !token) return;
+    
+    setIsLoggingCook(true);
+    try {
+      await logCook(Number(recipe.id), undefined, undefined, token);
+      Alert.alert('Logged!', 'Cook recorded! 👨‍🍳');
+      fetchCookStats(); // Refresh stats
+    } catch (error) {
+      console.error('Failed to log cook:', error);
+      Alert.alert('Error', 'Failed to log cook');
+    } finally {
+      setIsLoggingCook(false);
+    }
+  };
 
   const handleDelete = () => {
     Alert.alert(
@@ -154,6 +196,17 @@ export default function RecipeResultScreen() {
               <Text style={styles.deleteButtonText}>Delete</Text>
             </TouchableOpacity>
           </View>
+          
+          {/* Cook Stats Badge */}
+          {cookStats && cookStats.cookCount > 0 && (
+            <View style={styles.cookStatsBadge}>
+              <Ionicons name="restaurant" size={16} color="#4CAF50" />
+              <Text style={styles.cookStatsText}>
+                Made {cookStats.cookCount} time{cookStats.cookCount !== 1 ? 's' : ''}
+                {cookStats.averageRating && ` • ${cookStats.averageRating}★`}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Recipe Info */}
@@ -266,6 +319,22 @@ export default function RecipeResultScreen() {
         >
           <Ionicons name="restaurant" size={22} color="#FFF" />
           <Text style={styles.startCookingText}>Start Cooking</Text>
+        </TouchableOpacity>
+        
+        {/* I Made This Button */}
+        <TouchableOpacity
+          style={styles.madeThisButton}
+          onPress={handleQuickLog}
+          disabled={isLoggingCook}
+        >
+          {isLoggingCook ? (
+            <ActivityIndicator color="#4CAF50" />
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle-outline" size={22} color="#4CAF50" />
+              <Text style={styles.madeThisText}>I Made This!</Text>
+            </>
+          )}
         </TouchableOpacity>
 
         {/* Try Another Button */}
@@ -505,6 +574,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#000',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  cookStatsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#E8F5E9',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginTop: 12,
+    alignSelf: 'center',
+  },
+  cookStatsText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontFamily: 'Poppins_500Medium',
+  },
+  madeThisButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  madeThisText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4CAF50',
     fontFamily: 'Poppins_600SemiBold',
   },
 });

@@ -8,7 +8,10 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
-  RefreshControl
+  RefreshControl,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -22,6 +25,18 @@ export default function InventoryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Manual entry state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showFabMenu, setShowFabMenu] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemQuantity, setNewItemQuantity] = useState('1');
+  const [newItemUnit, setNewItemUnit] = useState('pieces');
+  const [newItemCategory, setNewItemCategory] = useState('general');
+  const [addingItem, setAddingItem] = useState(false);
+
+  const categories = ['produce', 'dairy', 'meat', 'pantry', 'frozen', 'beverages', 'snacks', 'general'];
+  const units = ['pieces', 'lbs', 'oz', 'kg', 'g', 'cups', 'tbsp', 'tsp', 'liters', 'ml', 'dozen', 'bunch'];
 
   const fetchInventory = useCallback(async () => {
     try {
@@ -94,6 +109,42 @@ export default function InventoryScreen() {
     }
   };
 
+  const handleAddManualItem = async () => {
+    if (!newItemName.trim()) {
+      Alert.alert('Error', 'Please enter an item name');
+      return;
+    }
+
+    setAddingItem(true);
+    try {
+      await api.post(
+        '/inventory/confirm',
+        {
+          items: [{
+            name: newItemName.trim(),
+            quantity: parseFloat(newItemQuantity) || 1,
+            unit: newItemUnit,
+            category: newItemCategory,
+          }]
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Reset form and close modal
+      setNewItemName('');
+      setNewItemQuantity('1');
+      setNewItemUnit('pieces');
+      setNewItemCategory('general');
+      setShowAddModal(false);
+      fetchInventory();
+    } catch (error) {
+      console.error('Failed to add item:', error);
+      Alert.alert('Error', 'Failed to add item');
+    } finally {
+      setAddingItem(false);
+    }
+  };
+
   const renderItem = (item: any) => (
     <View key={item.id} style={styles.itemCard}>
       <View style={styles.itemHeader}>
@@ -146,6 +197,111 @@ export default function InventoryScreen() {
     </View>
   );
 
+  const renderAddModal = () => (
+    <Modal
+      visible={showAddModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowAddModal(false)}
+    >
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Add Item</Text>
+            <TouchableOpacity onPress={() => setShowAddModal(false)}>
+              <Ionicons name="close" size={24} color="#000" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.inputLabel}>Item Name</Text>
+          <TextInput
+            style={styles.modalInput}
+            placeholder="e.g., Eggs, Milk, Bread..."
+            value={newItemName}
+            onChangeText={setNewItemName}
+            placeholderTextColor="#999"
+            autoFocus
+          />
+
+          <Text style={styles.inputLabel}>Quantity</Text>
+          <TextInput
+            style={styles.modalInput}
+            placeholder="1"
+            value={newItemQuantity}
+            onChangeText={setNewItemQuantity}
+            keyboardType="numeric"
+            placeholderTextColor="#999"
+          />
+
+          <Text style={styles.inputLabel}>Unit</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryPicker}
+          >
+            {units.map((unit) => (
+              <TouchableOpacity
+                key={unit}
+                style={[
+                  styles.categoryChip,
+                  newItemUnit === unit && styles.categoryChipActive,
+                ]}
+                onPress={() => setNewItemUnit(unit)}
+              >
+                <Text style={[
+                  styles.categoryChipText,
+                  newItemUnit === unit && styles.categoryChipTextActive,
+                ]}>
+                  {unit}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <Text style={styles.inputLabel}>Category</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryPicker}
+          >
+            {categories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.categoryChip,
+                  newItemCategory === cat && styles.categoryChipActive,
+                ]}
+                onPress={() => setNewItemCategory(cat)}
+              >
+                <Text style={[
+                  styles.categoryChipText,
+                  newItemCategory === cat && styles.categoryChipTextActive,
+                ]}>
+                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={handleAddManualItem}
+            disabled={addingItem}
+          >
+            {addingItem ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.addButtonText}>Add to Inventory</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -185,7 +341,7 @@ export default function InventoryScreen() {
             <Ionicons name="basket-outline" size={80} color="#CCC" />
             <Text style={styles.emptyTitle}>No Items Yet</Text>
             <Text style={styles.emptyText}>
-              Tap the + button to scan a receipt or pantry photo
+              Tap the + button to add items manually or scan a photo
             </Text>
           </View>
         ) : (
@@ -195,14 +351,51 @@ export default function InventoryScreen() {
         )}
       </ScrollView>
 
+      {/* FAB Menu */}
+      {showFabMenu && (
+        <View style={styles.fabMenu}>
+          <TouchableOpacity
+            style={styles.fabMenuItem}
+            onPress={() => {
+              setShowFabMenu(false);
+              setShowAddModal(true);
+            }}
+          >
+            <View style={styles.fabMenuIcon}>
+              <Ionicons name="create-outline" size={20} color="#FFF" />
+            </View>
+            <Text style={styles.fabMenuText}>Add Manually</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.fabMenuItem}
+            onPress={() => {
+              setShowFabMenu(false);
+              router.push('/(drawer)/inventory-scan');
+            }}
+          >
+            <View style={styles.fabMenuIcon}>
+              <Ionicons name="camera-outline" size={20} color="#FFF" />
+            </View>
+            <Text style={styles.fabMenuText}>Scan Photo</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Floating Action Button */}
       <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/(drawer)/inventory-scan')}
+        style={[styles.fab, showFabMenu && styles.fabActive]}
+        onPress={() => setShowFabMenu(!showFabMenu)}
         activeOpacity={0.8}
       >
-        <Ionicons name="add" size={32} color="#FFF" />
+        <Ionicons 
+          name={showFabMenu ? "close" : "add"} 
+          size={32} 
+          color="#FFF" 
+        />
       </TouchableOpacity>
+
+      {/* Manual Add Modal */}
+      {renderAddModal()}
     </View>
   );
 }
@@ -356,5 +549,114 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  fabActive: {
+    backgroundColor: '#333',
+  },
+  fabMenu: {
+    position: 'absolute',
+    right: 20,
+    bottom: 90,
+    alignItems: 'flex-end',
+    gap: 12,
+  },
+  fabMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  fabMenuIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  fabMenuText: {
+    backgroundColor: '#000',
+    color: '#FFF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#000',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+    fontFamily: 'Poppins_500Medium',
+  },
+  modalInput: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    marginBottom: 16,
+    fontFamily: 'Poppins_400Regular',
+    color: '#000',
+  },
+  categoryPicker: {
+    marginBottom: 20,
+  },
+  categoryChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    marginRight: 8,
+  },
+  categoryChipActive: {
+    backgroundColor: '#000',
+  },
+  categoryChipText: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Poppins_500Medium',
+  },
+  categoryChipTextActive: {
+    color: '#FFF',
+  },
+  addButton: {
+    backgroundColor: '#000',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
   },
 });

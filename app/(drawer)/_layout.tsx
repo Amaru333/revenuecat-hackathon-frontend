@@ -76,6 +76,18 @@ export default function DrawerLayout() {
         }}
       />
       <Drawer.Screen
+        name="shopping-list"
+        options={{
+          drawerLabel: 'Shopping List',
+        }}
+      />
+      <Drawer.Screen
+        name="cook-history"
+        options={{
+          drawerLabel: 'Cook History',
+        }}
+      />
+      <Drawer.Screen
         name="suggestions"
         options={{
           drawerLabel: 'Recipe Suggestions',
@@ -113,6 +125,13 @@ export default function DrawerLayout() {
         name="customer-center"
         options={{
           drawerLabel: 'Manage Subscription',
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+      <Drawer.Screen
+        name="cooking-mode"
+        options={{
+          drawerLabel: 'Cooking Mode',
           drawerItemStyle: { display: 'none' },
         }}
       />

@@ -7,6 +7,10 @@ import {
   Dimensions,
   Vibration,
   Platform,
+  Modal,
+  TextInput,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -22,6 +26,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useKeepAwake } from 'expo-keep-awake';
 import * as Speech from 'expo-speech';
+import { useAuth } from '@/contexts/AuthContext';
+import { logCook } from '@/services/cookHistoryService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
@@ -37,7 +43,12 @@ export default function CookingModeScreen() {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [showTimerPicker, setShowTimerPicker] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [notes, setNotes] = useState('');
+  const [isLogging, setIsLogging] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { token } = useAuth();
   
   const translateX = useSharedValue(0);
   const cardOpacity = useSharedValue(1);
@@ -329,13 +340,107 @@ export default function CookingModeScreen() {
           style={styles.doneButton}
           onPress={() => {
             Speech.stop();
-            router.back();
+            setShowRatingModal(true);
           }}
         >
           <Ionicons name="checkmark-circle" size={24} color="#FFF" />
           <Text style={styles.doneButtonText}>Done Cooking!</Text>
         </TouchableOpacity>
       )}
+
+      {/* Rating Modal */}
+      <Modal
+        visible={showRatingModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowRatingModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>How did it go? 🎉</Text>
+            <Text style={styles.modalSubtitle}>Log this cook to track your progress</Text>
+            
+            {/* Star Rating */}
+            <View style={styles.starsContainer}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setRating(star)}
+                  style={styles.starButton}
+                >
+                  <Ionicons
+                    name={star <= rating ? 'star' : 'star-outline'}
+                    size={40}
+                    color={star <= rating ? '#FFD700' : '#CCC'}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.ratingText}>
+              {rating === 0 ? 'Tap to rate' : 
+               rating === 1 ? 'Needs work' :
+               rating === 2 ? 'Okay' :
+               rating === 3 ? 'Good' :
+               rating === 4 ? 'Great!' : 'Amazing! 🌟'}
+            </Text>
+            
+            {/* Notes Input */}
+            <TextInput
+              style={styles.notesInput}
+              placeholder="Add notes (optional)..."
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              numberOfLines={3}
+              placeholderTextColor="#999"
+            />
+            
+            {/* Action Buttons */}
+            <TouchableOpacity
+              style={styles.logButton}
+              onPress={async () => {
+                if (!recipe?.id) {
+                  setShowRatingModal(false);
+                  router.back();
+                  return;
+                }
+                setIsLogging(true);
+                try {
+                  await logCook(Number(recipe.id), rating > 0 ? rating : undefined, notes || undefined, token || undefined);
+                  setShowRatingModal(false);
+                  Alert.alert('Logged!', 'Your cook has been recorded 👨‍🍳');
+                  router.back();
+                } catch (error) {
+                  console.error('Failed to log cook:', error);
+                  Alert.alert('Error', 'Failed to log cook');
+                } finally {
+                  setIsLogging(false);
+                }
+              }}
+              disabled={isLogging}
+            >
+              {isLogging ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark" size={20} color="#FFF" />
+                  <Text style={styles.logButtonText}>Log This Cook</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.skipButton}
+              onPress={() => {
+                setShowRatingModal(false);
+                router.back();
+              }}
+            >
+              <Text style={styles.skipButtonText}>Skip & Exit</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </GestureHandlerRootView>
   );
 }
@@ -573,5 +678,84 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontFamily: 'Poppins_600SemiBold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#000',
+    textAlign: 'center',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 24,
+    fontFamily: 'Poppins_400Regular',
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  starButton: {
+    padding: 4,
+  },
+  ratingText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+    fontFamily: 'Poppins_500Medium',
+  },
+  notesInput: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    marginBottom: 20,
+    fontFamily: 'Poppins_400Regular',
+    color: '#000',
+  },
+  logButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#4CAF50',
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  logButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  skipButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  skipButtonText: {
+    color: '#666',
+    fontSize: 14,
+    fontFamily: 'Poppins_400Regular',
   },
 });
