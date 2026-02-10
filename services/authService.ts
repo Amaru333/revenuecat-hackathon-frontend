@@ -6,9 +6,7 @@ const TOKEN_KEY = '@auth_token';
 const USER_KEY = '@auth_user';
 
 // API base URL
-const API_URL = __DEV__ 
-  ? `${BACKEND_URL}/auth`
-  : 'https://your-production-api.com/api/auth';
+const API_URL = `${BACKEND_URL}/auth`;
 
 const authClient = axios.create({
   baseURL: API_URL,

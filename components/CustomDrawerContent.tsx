@@ -39,6 +39,12 @@ export default function CustomDrawerContent(props: DrawerContentComponentProps) 
       activeIcon: 'cart',
     },
     {
+      name: 'Cookbooks',
+      icon: 'book-outline',
+      route: '/(drawer)/cookbooks',
+      activeIcon: 'book',
+    },
+    {
       name: 'Favorites',
       icon: 'heart-outline',
       route: '/(drawer)/favorites',

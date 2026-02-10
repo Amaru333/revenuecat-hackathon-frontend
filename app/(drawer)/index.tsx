@@ -246,7 +246,7 @@ export default function UploadScreen() {
           />
         </View>
         <Text style={styles.title}>What are you cooking?</Text>
-        <Text style={styles.subtitle}>Snap a photo, paste a link, or describe a dish</Text>
+        <Text style={styles.subtitle}>Snap a photo, upload a cookbook, or describe a dish</Text>
       </View>
 
       <KeyboardAvoidingView
@@ -280,14 +280,14 @@ export default function UploadScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickActionButton}
-            onPress={chooseVideo}
+            onPress={() => router.push('/(drawer)/cookbooks' as any)}
             disabled={isUploading}
             activeOpacity={0.7}
           >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#FF3B30' }]}>
-              <Ionicons name="videocam" size={22} color="#FFF" />
+            <View style={[styles.quickActionIcon, { backgroundColor: '#8B5CF6' }]}>
+              <Ionicons name="book" size={22} color="#FFF" />
             </View>
-            <Text style={styles.quickActionLabel}>Video</Text>
+            <Text style={styles.quickActionLabel}>Cookbook</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.quickActionButton}
@@ -310,7 +310,7 @@ export default function UploadScreen() {
           )}
 
           <TextInput
-            placeholder="Paste a video link or describe your meal..."
+            placeholder="Describe your meal or type a recipe idea..."
             placeholderTextColor="#999"
             style={styles.input}
             value={mealDescription}

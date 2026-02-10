@@ -14,6 +14,7 @@ const SUB_SCREENS = new Set([
   'inventory-scan',
   'paywall',
   'customer-center',
+  'cookbook-detail',
 ]);
 
 // Custom header with hamburger (top-level screens)
@@ -128,6 +129,12 @@ export default function DrawerLayout() {
         }}
       />
       <Drawer.Screen
+        name="cookbooks"
+        options={{
+          drawerLabel: 'Cookbooks',
+        }}
+      />
+      <Drawer.Screen
         name="suggestions"
         options={{
           drawerLabel: 'Recipe Suggestions',
@@ -177,6 +184,14 @@ export default function DrawerLayout() {
         name="cooking-mode"
         options={{
           drawerLabel: 'Cooking Mode',
+          drawerItemStyle: { display: 'none' },
+          header: () => <BackHeader />,
+        }}
+      />
+      <Drawer.Screen
+        name="cookbook-detail"
+        options={{
+          drawerLabel: 'Cookbook Detail',
           drawerItemStyle: { display: 'none' },
           header: () => <BackHeader />,
         }}

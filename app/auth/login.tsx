@@ -24,6 +24,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
 
   const handleLogin = async () => {
+    console.log('Attempting login with email:', email);
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -39,6 +40,7 @@ export default function LoginScreen() {
       // Navigate to main app
       router.replace('/(drawer)');
     } catch (error: any) {
+      console.error('Login error:', error);
       Alert.alert('Login Failed', error.message);
     } finally {
       setLoading(false);
@@ -98,12 +100,9 @@ export default function LoginScreen() {
             <Text style={styles.passkeyButtonText}>Log in with Passkey</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.linkButton}
-            onPress={() => router.push('/auth/signup')}
-          >
+          <TouchableOpacity style={styles.linkButton} onPress={() => router.push('/auth/signup')}>
             <Text style={styles.linkText}>
-              Don't have an account? <Text style={styles.linkTextBold}>Sign Up</Text>
+              Don&apos;t have an account? <Text style={styles.linkTextBold}>Sign Up</Text>
             </Text>
           </TouchableOpacity>
         </View>

@@ -1,10 +1,7 @@
 import axios from 'axios';
 import { BACKEND_URL } from '../constants/URL';
 // Backend API configuration
-// Update this URL based on your environment
-const API_BASE_URL = __DEV__ 
-  ? BACKEND_URL  // Development
-  : 'https://your-production-api.com/api';  // Production
+const API_BASE_URL = BACKEND_URL;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -59,7 +56,7 @@ export async function analyzeRecipe(
   base64Data: string,
   mimeType: string,
   userId?: number,
-  customPrompt?: string
+  customPrompt?: string,
 ): Promise<AnalyzeRecipeResponse> {
   const response = await api.post<AnalyzeRecipeResponse>('/recipes/analyze', {
     base64Data,
@@ -89,10 +86,7 @@ export async function getUserRecipes(userId: number): Promise<Recipe[]> {
 /**
  * Get all recipes with pagination
  */
-export async function getAllRecipes(
-  limit: number = 50,
-  offset: number = 0
-): Promise<Recipe[]> {
+export async function getAllRecipes(limit: number = 50, offset: number = 0): Promise<Recipe[]> {
   const response = await api.get<Recipe[]>('/recipes', {
     params: { limit, offset },
   });
