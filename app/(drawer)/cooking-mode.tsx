@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { Recipe } from '@/services/recipeService';
 import { GestureHandlerRootView, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -36,8 +36,8 @@ export default function CookingModeScreen() {
   useKeepAwake(); // Keep screen on while cooking
 
   const params = useLocalSearchParams();
-  const recipe: Recipe = params.recipe ? JSON.parse(params.recipe as string) : null;
-  
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+
   const [currentStep, setCurrentStep] = useState(0);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -49,9 +49,33 @@ export default function CookingModeScreen() {
   const [isLogging, setIsLogging] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { token } = useAuth();
-  
+
   const translateX = useSharedValue(0);
   const cardOpacity = useSharedValue(1);
+
+  // Reset ALL state whenever the recipe param changes (screen re-focused with new data)
+  useFocusEffect(
+    useCallback(() => {
+      const parsed: Recipe | null = params.recipe ? JSON.parse(params.recipe as string) : null;
+      setRecipe(parsed);
+      setCurrentStep(0);
+      setTimerSeconds(0);
+      setIsTimerRunning(false);
+      setShowTimerPicker(false);
+      setIsSpeaking(false);
+      setShowRatingModal(false);
+      setRating(0);
+      setNotes('');
+      setIsLogging(false);
+      translateX.value = 0;
+      Speech.stop();
+
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }, [params.recipe]),
+  );
 
   const totalSteps = recipe?.instructions?.length || 0;
 
@@ -97,7 +121,7 @@ export default function CookingModeScreen() {
   const animateTransition = (direction: 'left' | 'right', callback: () => void) => {
     const exitX = direction === 'left' ? -SCREEN_WIDTH : SCREEN_WIDTH;
     const enterX = direction === 'left' ? SCREEN_WIDTH : -SCREEN_WIDTH;
-    
+
     // Slide out current card
     translateX.value = withTiming(exitX, { duration: 200, easing: Easing.out(Easing.ease) }, () => {
       runOnJS(callback)();
@@ -112,7 +136,7 @@ export default function CookingModeScreen() {
     if (currentStep < totalSteps - 1) {
       Speech.stop();
       animateTransition('left', () => {
-        setCurrentStep(prev => prev + 1);
+        setCurrentStep((prev) => prev + 1);
       });
     }
   };
@@ -121,7 +145,7 @@ export default function CookingModeScreen() {
     if (currentStep > 0) {
       Speech.stop();
       animateTransition('right', () => {
-        setCurrentStep(prev => prev - 1);
+        setCurrentStep((prev) => prev - 1);
       });
     }
   };
@@ -136,11 +160,11 @@ export default function CookingModeScreen() {
         // Check if speech is available
         const isAvailable = await Speech.isSpeakingAsync();
         console.log('Speech currently speaking:', isAvailable);
-        
+
         setIsSpeaking(true);
         const textToSpeak = `Step ${currentStep + 1}. ${instruction}`;
         console.log('Speaking:', textToSpeak);
-        
+
         Speech.speak(textToSpeak, {
           language: 'en-US',
           pitch: 1.0,
@@ -222,16 +246,19 @@ export default function CookingModeScreen() {
     <GestureHandlerRootView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.exitBtn} onPress={() => {
-          Speech.stop();
-          router.back();
-        }}>
+        <TouchableOpacity
+          style={styles.exitBtn}
+          onPress={() => {
+            Speech.stop();
+            router.back();
+          }}
+        >
           <Ionicons name="close" size={28} color="#000" />
         </TouchableOpacity>
-        
+
         {isTimerRunning || timerSeconds > 0 ? (
           <TouchableOpacity style={styles.timerDisplay} onPress={stopTimer}>
-            <Ionicons name="timer" size={20} color={isTimerRunning ? "#FF9500" : "#666"} />
+            <Ionicons name="timer" size={20} color={isTimerRunning ? '#FF9500' : '#666'} />
             <Text style={[styles.timerText, isTimerRunning && styles.timerTextActive]}>
               {formatTime(timerSeconds)}
             </Text>
@@ -246,7 +273,9 @@ export default function CookingModeScreen() {
         <View style={styles.progressBar}>
           <Animated.View style={[styles.progressFill, { width: `${progress}%` }]} />
         </View>
-        <Text style={styles.stepIndicator}>Step {currentStep + 1} of {totalSteps}</Text>
+        <Text style={styles.stepIndicator}>
+          Step {currentStep + 1} of {totalSteps}
+        </Text>
       </View>
 
       {/* Main Content - Swipeable */}
@@ -254,24 +283,22 @@ export default function CookingModeScreen() {
         <Animated.View style={[styles.contentContainer, animatedStyle]}>
           <View style={styles.instructionCard}>
             <Text style={styles.instructionText}>{currentInstruction}</Text>
-            
+
             {/* Voice Button */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.voiceButton, isSpeaking && styles.voiceButtonActive]}
               onPress={speakCurrentStep}
             >
-              <Ionicons 
-                name={isSpeaking ? "volume-high" : "volume-medium-outline"} 
-                size={24} 
-                color={isSpeaking ? "#FFF" : "#666"} 
+              <Ionicons
+                name={isSpeaking ? 'volume-high' : 'volume-medium-outline'}
+                size={24}
+                color={isSpeaking ? '#FFF' : '#666'}
               />
             </TouchableOpacity>
           </View>
 
           {/* Swipe Hint */}
-          <Text style={styles.swipeHint}>
-            ← Swipe to navigate →
-          </Text>
+          <Text style={styles.swipeHint}>← Swipe to navigate →</Text>
         </Animated.View>
       </GestureDetector>
 
@@ -282,7 +309,7 @@ export default function CookingModeScreen() {
           onPress={goToPrevStep}
           disabled={currentStep === 0}
         >
-          <Ionicons name="chevron-back" size={24} color={currentStep === 0 ? "#CCC" : "#000"} />
+          <Ionicons name="chevron-back" size={24} color={currentStep === 0 ? '#CCC' : '#000'} />
           <Text style={[styles.navButtonText, currentStep === 0 && styles.navButtonTextDisabled]}>
             Prev
           </Text>
@@ -293,10 +320,19 @@ export default function CookingModeScreen() {
           onPress={goToNextStep}
           disabled={currentStep === totalSteps - 1}
         >
-          <Text style={[styles.navButtonText, currentStep === totalSteps - 1 && styles.navButtonTextDisabled]}>
+          <Text
+            style={[
+              styles.navButtonText,
+              currentStep === totalSteps - 1 && styles.navButtonTextDisabled,
+            ]}
+          >
             Next
           </Text>
-          <Ionicons name="chevron-forward" size={24} color={currentStep === totalSteps - 1 ? "#CCC" : "#000"} />
+          <Ionicons
+            name="chevron-forward"
+            size={24}
+            color={currentStep === totalSteps - 1 ? '#CCC' : '#000'}
+          />
         </TouchableOpacity>
       </View>
 
@@ -324,10 +360,7 @@ export default function CookingModeScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity
-            style={styles.addTimerButton}
-            onPress={() => setShowTimerPicker(true)}
-          >
+          <TouchableOpacity style={styles.addTimerButton} onPress={() => setShowTimerPicker(true)}>
             <Ionicons name="timer-outline" size={22} color="#000" />
             <Text style={styles.addTimerText}>Add Timer</Text>
           </TouchableOpacity>
@@ -359,7 +392,7 @@ export default function CookingModeScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>How did it go? 🎉</Text>
             <Text style={styles.modalSubtitle}>Log this cook to track your progress</Text>
-            
+
             {/* Star Rating */}
             <View style={styles.starsContainer}>
               {[1, 2, 3, 4, 5].map((star) => (
@@ -377,13 +410,19 @@ export default function CookingModeScreen() {
               ))}
             </View>
             <Text style={styles.ratingText}>
-              {rating === 0 ? 'Tap to rate' : 
-               rating === 1 ? 'Needs work' :
-               rating === 2 ? 'Okay' :
-               rating === 3 ? 'Good' :
-               rating === 4 ? 'Great!' : 'Amazing! 🌟'}
+              {rating === 0
+                ? 'Tap to rate'
+                : rating === 1
+                  ? 'Needs work'
+                  : rating === 2
+                    ? 'Okay'
+                    : rating === 3
+                      ? 'Good'
+                      : rating === 4
+                        ? 'Great!'
+                        : 'Amazing! 🌟'}
             </Text>
-            
+
             {/* Notes Input */}
             <TextInput
               style={styles.notesInput}
@@ -394,7 +433,7 @@ export default function CookingModeScreen() {
               numberOfLines={3}
               placeholderTextColor="#999"
             />
-            
+
             {/* Action Buttons */}
             <TouchableOpacity
               style={styles.logButton}
@@ -406,7 +445,12 @@ export default function CookingModeScreen() {
                 }
                 setIsLogging(true);
                 try {
-                  await logCook(Number(recipe.id), rating > 0 ? rating : undefined, notes || undefined, token || undefined);
+                  await logCook(
+                    Number(recipe.id),
+                    rating > 0 ? rating : undefined,
+                    notes || undefined,
+                    token || undefined,
+                  );
                   setShowRatingModal(false);
                   Alert.alert('Logged!', 'Your cook has been recorded 👨‍🍳');
                   router.back();
@@ -428,7 +472,7 @@ export default function CookingModeScreen() {
                 </>
               )}
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.skipButton}
               onPress={() => {
@@ -499,7 +543,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#000',
+    backgroundColor: '#FF6B35',
     borderRadius: 3,
   },
   stepIndicator: {
@@ -522,8 +566,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
     elevation: 5,
     position: 'relative',
   },
@@ -546,7 +590,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   voiceButtonActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FF6B35',
   },
   swipeHint: {
     marginTop: 20,

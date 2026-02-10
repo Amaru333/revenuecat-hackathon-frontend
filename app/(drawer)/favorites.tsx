@@ -45,7 +45,7 @@ export default function FavoritesScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchFavorites();
-    }, [token])
+    }, [token]),
   );
 
   const onRefresh = () => {
@@ -76,21 +76,24 @@ export default function FavoritesScreen() {
           style: 'destructive',
           onPress: async () => {
             if (!token) return;
-            
+
             try {
               await deleteRecipe(recipeId, token);
               // Remove from local state
-              setFavorites(prev => prev.filter(r => r.id !== recipeId));
+              setFavorites((prev) => prev.filter((r) => r.id !== recipeId));
             } catch (error) {
               Alert.alert('Error', 'Failed to delete recipe. Please try again.');
             }
           },
         },
-      ]
+      ],
     );
   };
 
-  const renderRightActions = (progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
+  const renderRightActions = (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>,
+  ) => {
     const trans = dragX.interpolate({
       inputRange: [-100, 0],
       outputRange: [0, 100],
@@ -115,7 +118,7 @@ export default function FavoritesScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#000" />
+        <ActivityIndicator size="large" color="#FF6B35" />
         <Text style={styles.loadingText}>Loading favorites...</Text>
       </View>
     );
@@ -139,15 +142,11 @@ export default function FavoritesScreen() {
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.centerContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <Ionicons name="heart-outline" size={80} color="#CCC" />
         <Text style={styles.emptyTitle}>No Favorites Yet</Text>
-        <Text style={styles.emptyMessage}>
-          Recipes you favorite will appear here
-        </Text>
+        <Text style={styles.emptyMessage}>Recipes you favorite will appear here</Text>
         <TouchableOpacity
           style={styles.browseButton}
           onPress={() => router.push('/(drawer)/suggestions')}
@@ -163,9 +162,7 @@ export default function FavoritesScreen() {
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <View style={styles.header}>
           <Ionicons name="heart" size={32} color="#FF3B30" />
@@ -188,47 +185,47 @@ export default function FavoritesScreen() {
                 onPress={() => handleRecipePress(recipe)}
                 activeOpacity={0.7}
               >
-            <View style={styles.cardHeader}>
-              <Ionicons name="heart" size={20} color="#FF3B30" />
-              <Text style={styles.recipeName}>{recipe.name}</Text>
-            </View>
-            
-            {recipe.description && (
-              <Text style={styles.recipeDescription} numberOfLines={2}>
-                {recipe.description}
-              </Text>
-            )}
+                <View style={styles.cardHeader}>
+                  <Ionicons name="heart" size={20} color="#FF3B30" />
+                  <Text style={styles.recipeName}>{recipe.name}</Text>
+                </View>
 
-            <View style={styles.recipeMetaRow}>
-              <View style={styles.metaItem}>
-                <Ionicons name="time-outline" size={16} color="#666" />
-                <Text style={styles.metaText}>{recipe.prepTime}</Text>
-              </View>
-              <View style={styles.metaItem}>
-                <Ionicons name="flame-outline" size={16} color="#666" />
-                <Text style={styles.metaText}>{recipe.cookTime}</Text>
-              </View>
-              <View style={styles.metaItem}>
-                <Ionicons name="people-outline" size={16} color="#666" />
-                <Text style={styles.metaText}>{recipe.servings}</Text>
-              </View>
-            </View>
+                {recipe.description && (
+                  <Text style={styles.recipeDescription} numberOfLines={2}>
+                    {recipe.description}
+                  </Text>
+                )}
 
-            {recipe.ingredients && recipe.ingredients.length > 0 && (
-              <View style={styles.ingredientsPreview}>
-                <Text style={styles.ingredientsLabel}>Key ingredients:</Text>
-                <Text style={styles.ingredientsText} numberOfLines={2}>
-                  {recipe.ingredients.slice(0, 3).join(', ')}
-                  {recipe.ingredients.length > 3 && '...'}
-                </Text>
-              </View>
-            )}
+                <View style={styles.recipeMetaRow}>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="time-outline" size={16} color="#666" />
+                    <Text style={styles.metaText}>{recipe.prepTime}</Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="flame-outline" size={16} color="#666" />
+                    <Text style={styles.metaText}>{recipe.cookTime}</Text>
+                  </View>
+                  <View style={styles.metaItem}>
+                    <Ionicons name="people-outline" size={16} color="#666" />
+                    <Text style={styles.metaText}>{recipe.servings}</Text>
+                  </View>
+                </View>
 
-            <View style={styles.cardFooter}>
-                <Ionicons name="chevron-forward" size={20} color="#666" />
-              </View>
-            </TouchableOpacity>
-          </Swipeable>
+                {recipe.ingredients && recipe.ingredients.length > 0 && (
+                  <View style={styles.ingredientsPreview}>
+                    <Text style={styles.ingredientsLabel}>Key ingredients:</Text>
+                    <Text style={styles.ingredientsText} numberOfLines={2}>
+                      {recipe.ingredients.slice(0, 3).join(', ')}
+                      {recipe.ingredients.length > 3 && '...'}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.cardFooter}>
+                  <Ionicons name="chevron-forward" size={20} color="#666" />
+                </View>
+              </TouchableOpacity>
+            </Swipeable>
           ))}
         </View>
       </ScrollView>
@@ -272,10 +269,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
   },
   retryButton: {
-    backgroundColor: '#000',
-    paddingVertical: 12,
+    backgroundColor: '#FF6B35',
+    paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   retryButtonText: {
     color: '#FFF',
@@ -299,10 +296,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
   },
   browseButton: {
-    backgroundColor: '#000',
-    paddingVertical: 12,
+    backgroundColor: '#FF6B35',
+    paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   browseButtonText: {
     color: '#FFF',
@@ -376,10 +373,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
   },
   ingredientsPreview: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFF8F5',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#FFE8DE',
   },
   ingredientsLabel: {
     fontSize: 12,

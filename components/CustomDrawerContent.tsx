@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
@@ -74,41 +68,30 @@ export default function CustomDrawerContent(props: DrawerContentComponentProps) 
           <View style={styles.avatarContainer}>
             <Ionicons name="person" size={40} color="#FFFFFF" />
           </View>
-          <Text style={styles.userName}>
-            {user?.username || 'User'}
-          </Text>
-          <Text style={styles.userEmail}>
-            {user?.email || 'user@example.com'}
-          </Text>
+          <Text style={styles.userName}>{user?.username || 'User'}</Text>
+          <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
         </View>
 
         {/* Navigation Menu Items */}
         <View style={styles.menuSection}>
           {menuItems.map((item, index) => {
-            const isActive = currentRoute === item.route.split('/').pop() || 
-                           (item.route === '/(drawer)' && currentRoute === 'index');
-            
+            const isActive =
+              currentRoute === item.route.split('/').pop() ||
+              (item.route === '/(drawer)' && currentRoute === 'index');
+
             return (
               <TouchableOpacity
                 key={index}
-                style={[
-                  styles.menuItem,
-                  isActive && styles.menuItemActive
-                ]}
+                style={[styles.menuItem, isActive && styles.menuItemActive]}
                 onPress={() => router.push(item.route as any)}
                 activeOpacity={0.7}
               >
                 <Ionicons
-                  name={isActive ? item.activeIcon as any : item.icon as any}
+                  name={isActive ? (item.activeIcon as any) : (item.icon as any)}
                   size={24}
-                  color={isActive ? '#000' : '#666'}
+                  color={isActive ? '#FF6B35' : '#666'}
                 />
-                <Text
-                  style={[
-                    styles.menuText,
-                    isActive && styles.menuTextActive
-                  ]}
-                >
+                <Text style={[styles.menuText, isActive && styles.menuTextActive]}>
                   {item.name}
                 </Text>
               </TouchableOpacity>
@@ -119,18 +102,12 @@ export default function CustomDrawerContent(props: DrawerContentComponentProps) 
 
       {/* Logout Button */}
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
           <Ionicons name="log-out-outline" size={22} color="#FFFFFF" />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
-        
-        <Text style={styles.version}>
-          Version 1.0.0
-        </Text>
+
+        <Text style={styles.version}>Version 1.0.0</Text>
       </View>
     </View>
   );
@@ -159,7 +136,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
-    backgroundColor: '#000',
+    backgroundColor: '#FF6B35',
   },
   userName: {
     fontSize: 20,
@@ -179,14 +156,14 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 14,
     paddingHorizontal: 20,
     marginHorizontal: 10,
     marginVertical: 2,
     borderRadius: 12,
   },
   menuItemActive: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFF3ED',
   },
   menuText: {
     fontSize: 16,
@@ -195,7 +172,8 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   menuTextActive: {
-    color: '#000',
+    color: '#FF6B35',
+    fontFamily: 'Poppins_600SemiBold',
   },
   footer: {
     paddingHorizontal: 20,
@@ -211,7 +189,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
     marginBottom: 16,
-    backgroundColor: '#000',
+    backgroundColor: '#FF3B30',
   },
   logoutText: {
     color: '#FFFFFF',

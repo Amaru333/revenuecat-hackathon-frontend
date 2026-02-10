@@ -10,34 +10,49 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
-import { Recipe, saveRecipeFromSuggestion, deleteRecipe, toggleFavorite } from '@/services/recipeService';
+import {
+  Recipe,
+  saveRecipeFromSuggestion,
+  deleteRecipe,
+  toggleFavorite,
+} from '@/services/recipeService';
 import { useAuth } from '@/contexts/AuthContext';
 import { getRecipeCookStats, logCook, CookStats } from '@/services/cookHistoryService';
 
 export default function RecipeResultScreen() {
   const params = useLocalSearchParams();
   const { token } = useAuth();
-  
-  // Parse the recipe data from URL params
-  const initialRecipe: Recipe = params.recipe ? JSON.parse(params.recipe as string) : null;
-  
+
   // State for the recipe (may be updated with saved ID)
-  const [recipe, setRecipe] = useState<Recipe>(initialRecipe);
-  
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+
   // State for ingredient checklist
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(initialRecipe?.isFavorite || false);
-  
+  const [isFavorite, setIsFavorite] = useState(false);
+
   // Cook history state
   const [cookStats, setCookStats] = useState<CookStats | null>(null);
   const [isLoggingCook, setIsLoggingCook] = useState(false);
+
+  // Reset all state whenever the recipe param changes (screen re-focused with new data)
+  useFocusEffect(
+    useCallback(() => {
+      const parsed: Recipe | null = params.recipe ? JSON.parse(params.recipe as string) : null;
+      setRecipe(parsed);
+      setCheckedIngredients(new Set());
+      setIsSaving(false);
+      setIsFavorite(parsed?.isFavorite || false);
+      setCookStats(null);
+      setIsLoggingCook(false);
+    }, [params.recipe]),
+  );
 
   // Auto-save recipe if it's from suggestions (negative ID)
   useEffect(() => {
     const saveRecipeIfNeeded = async () => {
       if (!recipe || !token) return;
-      
+
       const recipeId = parseInt(recipe.id);
       // Check if this is a suggestion (negative ID) and hasn't been saved yet
       if (recipeId < 0 && !isSaving) {
@@ -65,7 +80,7 @@ export default function RecipeResultScreen() {
     if (!recipe?.id || !token) return;
     const recipeId = Number(recipe.id);
     if (recipeId <= 0) return; // Skip for unsaved recipes
-    
+
     try {
       const stats = await getRecipeCookStats(recipeId, token);
       setCookStats(stats);
@@ -77,12 +92,12 @@ export default function RecipeResultScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchCookStats();
-    }, [fetchCookStats])
+    }, [fetchCookStats]),
   );
 
   const handleQuickLog = async () => {
     if (!recipe?.id || !token) return;
-    
+
     setIsLoggingCook(true);
     try {
       await logCook(Number(recipe.id), undefined, undefined, token);
@@ -110,7 +125,7 @@ export default function RecipeResultScreen() {
           style: 'destructive',
           onPress: async () => {
             if (!token || !recipe) return;
-            
+
             try {
               await deleteRecipe(recipe.id, token);
               router.back();
@@ -119,16 +134,16 @@ export default function RecipeResultScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
   const handleToggleFavorite = async () => {
     if (!token || !recipe) return;
-    
+
     // Optimistic update
     setIsFavorite(!isFavorite);
-    
+
     try {
       const newFavoriteStatus = await toggleFavorite(recipe.id, token);
       setIsFavorite(newFavoriteStatus);
@@ -153,10 +168,7 @@ export default function RecipeResultScreen() {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>No recipe data found</Text>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -169,7 +181,7 @@ export default function RecipeResultScreen() {
         <View style={styles.recipeHeader}>
           <Text style={styles.recipeName}>{recipe.name}</Text>
           <Text style={styles.recipeDescription}>{recipe.description}</Text>
-          
+
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
             <TouchableOpacity
@@ -178,15 +190,15 @@ export default function RecipeResultScreen() {
               activeOpacity={0.7}
             >
               <Ionicons
-                name={isFavorite ? "heart" : "heart-outline"}
+                name={isFavorite ? 'heart' : 'heart-outline'}
                 size={24}
-                color={isFavorite ? "#FF3B30" : "#666"}
+                color={isFavorite ? '#FF3B30' : '#666'}
               />
               <Text style={[styles.actionButtonText, isFavorite && styles.favoriteText]}>
                 {isFavorite ? 'Favorited' : 'Favorite'}
               </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={handleDelete}
@@ -196,7 +208,7 @@ export default function RecipeResultScreen() {
               <Text style={styles.deleteButtonText}>Delete</Text>
             </TouchableOpacity>
           </View>
-          
+
           {/* Cook Stats Badge */}
           {cookStats && cookStats.cookCount > 0 && (
             <View style={styles.cookStatsBadge}>
@@ -234,10 +246,11 @@ export default function RecipeResultScreen() {
           {recipe.ingredients.map((ingredient, index) => {
             const isChecked = checkedIngredients.has(index);
             // Handle both string and object formats
-            const ingredientText = typeof ingredient === 'string' 
-              ? ingredient 
-              : `${(ingredient as any).amount || ''} ${(ingredient as any).item || ''}`.trim();
-            
+            const ingredientText =
+              typeof ingredient === 'string'
+                ? ingredient
+                : `${(ingredient as any).amount || ''} ${(ingredient as any).item || ''}`.trim();
+
             return (
               <TouchableOpacity
                 key={index}
@@ -246,16 +259,11 @@ export default function RecipeResultScreen() {
                 activeOpacity={0.7}
               >
                 <Ionicons
-                  name={isChecked ? "checkmark-circle" : "ellipse-outline"}
+                  name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
                   size={20}
-                  color={isChecked ? "#4CAF50" : "#CCC"}
+                  color={isChecked ? '#4CAF50' : '#CCC'}
                 />
-                <Text
-                  style={[
-                    styles.ingredientText,
-                    isChecked && styles.ingredientTextChecked
-                  ]}
-                >
+                <Text style={[styles.ingredientText, isChecked && styles.ingredientTextChecked]}>
                   {ingredientText}
                 </Text>
               </TouchableOpacity>
@@ -312,15 +320,17 @@ export default function RecipeResultScreen() {
         {/* Start Cooking Button */}
         <TouchableOpacity
           style={styles.startCookingButton}
-          onPress={() => router.push({
-            pathname: '/(drawer)/cooking-mode',
-            params: { recipe: JSON.stringify(recipe) },
-          })}
+          onPress={() =>
+            router.push({
+              pathname: '/(drawer)/cooking-mode',
+              params: { recipe: JSON.stringify(recipe) },
+            })
+          }
         >
           <Ionicons name="restaurant" size={22} color="#FFF" />
           <Text style={styles.startCookingText}>Start Cooking</Text>
         </TouchableOpacity>
-        
+
         {/* I Made This Button */}
         <TouchableOpacity
           style={styles.madeThisButton}
@@ -338,10 +348,7 @@ export default function RecipeResultScreen() {
         </TouchableOpacity>
 
         {/* Try Another Button */}
-        <TouchableOpacity
-          style={styles.tryAnotherButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.tryAnotherButton} onPress={() => router.back()}>
           <Ionicons name="add-circle-outline" size={22} color="#000" />
           <Text style={styles.tryAnotherText}>Try Another</Text>
         </TouchableOpacity>
@@ -377,9 +384,14 @@ const styles = StyleSheet.create({
   },
   recipeResultsContainer: {
     backgroundColor: '#FFF',
-    margin: 20,
-    borderRadius: 16,
+    margin: 16,
+    borderRadius: 20,
     padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   recipeHeader: {
     marginBottom: 20,
@@ -409,8 +421,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 12,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 14,
   },
   deleteButton: {
     flex: 1,
@@ -419,8 +431,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 12,
-    backgroundColor: '#FFF',
-    borderRadius: 12,
+    backgroundColor: '#FFF5F5',
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#FF3B30',
   },
@@ -444,8 +456,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     marginBottom: 24,
     paddingVertical: 16,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
+    backgroundColor: '#FFF8F5',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FFE8DE',
   },
   infoBox: {
     alignItems: 'center',
@@ -503,7 +517,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#000',
+    backgroundColor: '#FF6B35',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -530,8 +544,10 @@ const styles = StyleSheet.create({
     minWidth: '45%',
     alignItems: 'center',
     paddingVertical: 16,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
+    backgroundColor: '#FFF8F5',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FFE8DE',
   },
   nutritionValue: {
     fontSize: 20,
@@ -550,9 +566,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 16,
-    backgroundColor: '#000',
-    borderRadius: 12,
+    backgroundColor: '#FF6B35',
+    borderRadius: 14,
     marginTop: 8,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   startCookingText: {
     fontSize: 16,
@@ -567,7 +588,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     backgroundColor: '#F5F5F5',
-    borderRadius: 12,
+    borderRadius: 14,
     marginTop: 8,
   },
   tryAnotherText: {
@@ -600,7 +621,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     backgroundColor: '#E8F5E9',
-    borderRadius: 12,
+    borderRadius: 14,
     marginTop: 8,
     borderWidth: 1,
     borderColor: '#4CAF50',

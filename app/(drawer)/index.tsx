@@ -245,7 +245,8 @@ export default function UploadScreen() {
             resizeMode="contain"
           />
         </View>
-        <Text style={styles.text}>Let's find out what you're eating!</Text>
+        <Text style={styles.title}>What are you cooking?</Text>
+        <Text style={styles.subtitle}>Snap a photo, paste a link, or describe a dish</Text>
       </View>
 
       <KeyboardAvoidingView
@@ -253,29 +254,63 @@ export default function UploadScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 119 : 0}
         style={{ flexShrink: 0 }}
       >
-        <View style={styles.inputContainer}>
-          {/* Suggestion Chip */}
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
           <TouchableOpacity
-            style={styles.suggestionChip}
+            style={styles.quickActionButton}
+            onPress={takePhoto}
+            disabled={isUploading}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickActionIcon}>
+              <Ionicons name="camera" size={22} color="#FFF" />
+            </View>
+            <Text style={styles.quickActionLabel}>Camera</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={chooseFromGallery}
+            disabled={isUploading}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#4ECDC4' }]}>
+              <Ionicons name="images" size={22} color="#FFF" />
+            </View>
+            <Text style={styles.quickActionLabel}>Gallery</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={chooseVideo}
+            disabled={isUploading}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#FF3B30' }]}>
+              <Ionicons name="videocam" size={22} color="#FFF" />
+            </View>
+            <Text style={styles.quickActionLabel}>Video</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickActionButton}
             onPress={() => router.push('/(drawer)/suggestions')}
             activeOpacity={0.7}
           >
-            <Ionicons name="bulb-outline" size={18} color="#666" />
-            <Text style={styles.suggestionChipText}>
-              Give me suggestions on what to prepare with my inventory items
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color="#666" />
+            <View style={[styles.quickActionIcon, { backgroundColor: '#FFB800' }]}>
+              <Ionicons name="bulb" size={22} color="#FFF" />
+            </View>
+            <Text style={styles.quickActionLabel}>Suggest</Text>
           </TouchableOpacity>
+        </View>
 
+        <View style={styles.inputContainer}>
           {isUploading && (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#000" />
+              <ActivityIndicator size="large" color="#FF6B35" />
               <Text style={styles.loadingText}>Analyzing your meal...</Text>
             </View>
           )}
 
           <TextInput
-            placeholder="Paste a video link (YouTube, Instagram, TikTok...) or describe your meal..."
+            placeholder="Paste a video link or describe your meal..."
             placeholderTextColor="#999"
             style={styles.input}
             value={mealDescription}
@@ -290,15 +325,16 @@ export default function UploadScreen() {
               onPress={showUploadOptions}
               disabled={isUploading}
             >
-              <Ionicons name="cloud-upload-outline" size={18} />
-              <Text style={{ fontFamily: 'Poppins_400Regular' }}>Upload</Text>
+              <Ionicons name="attach" size={20} color="#666" />
+              <Text style={styles.uploadBtnText}>Attach</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.uploadButton, { backgroundColor: '#000', width: 40 }]}
+              style={styles.sendButton}
               onPress={handleTextSubmit}
               disabled={isUploading}
+              activeOpacity={0.8}
             >
-              <Ionicons name="arrow-up" size={18} color="#fff" />
+              <Ionicons name="arrow-up" size={20} color="#FFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -308,61 +344,99 @@ export default function UploadScreen() {
 }
 
 const styles = StyleSheet.create({
-  suggestionChip: {
+  quickActions: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0F0F0',
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginBottom: 12,
-    gap: 8,
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
-  suggestionChipText: {
-    flex: 1,
-    fontSize: 13,
+  quickActionButton: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  quickActionIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#FF6B35',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  quickActionLabel: {
+    fontSize: 12,
     color: '#666',
-    fontFamily: 'Poppins_400Regular',
+    fontFamily: 'Poppins_500Medium',
   },
   uploadButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   uploadButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 6,
     backgroundColor: '#F5F5F5',
-    borderRadius: 999,
-    padding: 10,
-    justifyContent: 'center',
+    borderRadius: 20,
+    paddingHorizontal: 14,
     height: 40,
   },
+  uploadBtnText: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Poppins_400Regular',
+  },
+  sendButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FF6B35',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   inputContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    margin: 20,
-    padding: 10,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   input: {
-    borderWidth: 1,
-    backgroundColor: '#fff',
-    borderColor: '#FFF',
+    backgroundColor: '#FFF',
     borderRadius: 10,
     fontFamily: 'Poppins_400Regular',
-    paddingBottom: 20,
-    paddingTop: 10,
+    paddingBottom: 16,
+    paddingTop: 8,
+    fontSize: 15,
+    color: '#000',
   },
   container: {
     flex: 1,
   },
-  text: {
-    fontSize: 24,
-    marginTop: 40,
-    width: '80%',
+  title: {
+    fontSize: 26,
+    marginTop: 24,
+    textAlign: 'center',
+    color: '#000',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  subtitle: {
+    fontSize: 15,
+    marginTop: 8,
     textAlign: 'center',
     color: '#999',
     fontFamily: 'Poppins_400Regular',
+    paddingHorizontal: 20,
   },
   imageContainer: {
     flex: 1,
@@ -370,10 +444,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  imageWrapper: {},
+  imageWrapper: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: '#FFF3ED',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 4,
+  },
   foodImage: {
-    width: 200,
-    height: 200,
+    width: 120,
+    height: 120,
   },
   loadingContainer: {
     alignItems: 'center',

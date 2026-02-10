@@ -14,7 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
 
@@ -25,7 +25,7 @@ export default function InventoryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Manual entry state
   const [showAddModal, setShowAddModal] = useState(false);
   const [showFabMenu, setShowFabMenu] = useState(false);
@@ -35,16 +35,38 @@ export default function InventoryScreen() {
   const [newItemCategory, setNewItemCategory] = useState('general');
   const [addingItem, setAddingItem] = useState(false);
 
-  const categories = ['produce', 'dairy', 'meat', 'pantry', 'frozen', 'beverages', 'snacks', 'general'];
-  const units = ['pieces', 'lbs', 'oz', 'kg', 'g', 'cups', 'tbsp', 'tsp', 'liters', 'ml', 'dozen', 'bunch'];
+  const categories = [
+    'produce',
+    'dairy',
+    'meat',
+    'pantry',
+    'frozen',
+    'beverages',
+    'snacks',
+    'general',
+  ];
+  const units = [
+    'pieces',
+    'lbs',
+    'oz',
+    'kg',
+    'g',
+    'cups',
+    'tbsp',
+    'tsp',
+    'liters',
+    'ml',
+    'dozen',
+    'bunch',
+  ];
 
   const fetchInventory = useCallback(async () => {
     try {
       const response = await api.get('/inventory', {
         headers: { Authorization: `Bearer ${token}` },
-        params: searchQuery ? { search: searchQuery } : {}
+        params: searchQuery ? { search: searchQuery } : {},
       });
-      
+
       setItems(response.data.items);
       setGroupedItems(response.data.groupedItems);
     } catch (error) {
@@ -56,9 +78,17 @@ export default function InventoryScreen() {
     }
   }, [token, searchQuery]);
 
+  // Refresh inventory every time the screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      fetchInventory();
+    }, [fetchInventory]),
+  );
+
+  // Also refetch when search query changes
   useEffect(() => {
     fetchInventory();
-  }, [fetchInventory]);
+  }, [searchQuery]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -66,32 +96,28 @@ export default function InventoryScreen() {
   };
 
   const handleDeleteItem = async (itemId: number) => {
-    Alert.alert(
-      'Delete Item',
-      'Are you sure you want to delete this item?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/inventory/${itemId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-              fetchInventory();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete item');
-            }
+    Alert.alert('Delete Item', 'Are you sure you want to delete this item?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.delete(`/inventory/${itemId}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            fetchInventory();
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete item');
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   const handleUpdateQuantity = async (itemId: number, currentQuantity: number, delta: number) => {
     const newQuantity = Math.max(0, currentQuantity + delta);
-    
+
     if (newQuantity === 0) {
       handleDeleteItem(itemId);
       return;
@@ -101,7 +127,7 @@ export default function InventoryScreen() {
       await api.put(
         `/inventory/${itemId}`,
         { quantity: newQuantity },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       fetchInventory();
     } catch (error) {
@@ -120,16 +146,18 @@ export default function InventoryScreen() {
       await api.post(
         '/inventory/confirm',
         {
-          items: [{
-            name: newItemName.trim(),
-            quantity: parseFloat(newItemQuantity) || 1,
-            unit: newItemUnit,
-            category: newItemCategory,
-          }]
+          items: [
+            {
+              name: newItemName.trim(),
+              quantity: parseFloat(newItemQuantity) || 1,
+              unit: newItemUnit,
+              category: newItemCategory,
+            },
+          ],
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
-      
+
       // Reset form and close modal
       setNewItemName('');
       setNewItemQuantity('1');
@@ -152,14 +180,11 @@ export default function InventoryScreen() {
           <Text style={styles.itemName}>{item.name}</Text>
           <Text style={styles.itemCategory}>{item.category || 'Other'}</Text>
         </View>
-        <TouchableOpacity
-          onPress={() => handleDeleteItem(item.id)}
-          style={styles.deleteButton}
-        >
+        <TouchableOpacity onPress={() => handleDeleteItem(item.id)} style={styles.deleteButton}>
           <Ionicons name="trash-outline" size={20} color="#FF3B30" />
         </TouchableOpacity>
       </View>
-      
+
       <View style={styles.quantityContainer}>
         <TouchableOpacity
           onPress={() => handleUpdateQuantity(item.id, item.quantity, -1)}
@@ -167,11 +192,11 @@ export default function InventoryScreen() {
         >
           <Ionicons name="remove" size={20} color="#000" />
         </TouchableOpacity>
-        
+
         <Text style={styles.quantityText}>
           {item.quantity} {item.unit || 'pieces'}
         </Text>
-        
+
         <TouchableOpacity
           onPress={() => handleUpdateQuantity(item.id, item.quantity, 1)}
           style={styles.quantityButton}
@@ -204,7 +229,7 @@ export default function InventoryScreen() {
       transparent={true}
       onRequestClose={() => setShowAddModal(false)}
     >
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalOverlay}
       >
@@ -237,24 +262,23 @@ export default function InventoryScreen() {
           />
 
           <Text style={styles.inputLabel}>Unit</Text>
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.categoryPicker}
           >
             {units.map((unit) => (
               <TouchableOpacity
                 key={unit}
-                style={[
-                  styles.categoryChip,
-                  newItemUnit === unit && styles.categoryChipActive,
-                ]}
+                style={[styles.categoryChip, newItemUnit === unit && styles.categoryChipActive]}
                 onPress={() => setNewItemUnit(unit)}
               >
-                <Text style={[
-                  styles.categoryChipText,
-                  newItemUnit === unit && styles.categoryChipTextActive,
-                ]}>
+                <Text
+                  style={[
+                    styles.categoryChipText,
+                    newItemUnit === unit && styles.categoryChipTextActive,
+                  ]}
+                >
                   {unit}
                 </Text>
               </TouchableOpacity>
@@ -262,24 +286,23 @@ export default function InventoryScreen() {
           </ScrollView>
 
           <Text style={styles.inputLabel}>Category</Text>
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.categoryPicker}
           >
             {categories.map((cat) => (
               <TouchableOpacity
                 key={cat}
-                style={[
-                  styles.categoryChip,
-                  newItemCategory === cat && styles.categoryChipActive,
-                ]}
+                style={[styles.categoryChip, newItemCategory === cat && styles.categoryChipActive]}
                 onPress={() => setNewItemCategory(cat)}
               >
-                <Text style={[
-                  styles.categoryChipText,
-                  newItemCategory === cat && styles.categoryChipTextActive,
-                ]}>
+                <Text
+                  style={[
+                    styles.categoryChipText,
+                    newItemCategory === cat && styles.categoryChipTextActive,
+                  ]}
+                >
                   {cat.charAt(0).toUpperCase() + cat.slice(1)}
                 </Text>
               </TouchableOpacity>
@@ -305,7 +328,7 @@ export default function InventoryScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#000" />
+        <ActivityIndicator size="large" color="#FF6B35" />
       </View>
     );
   }
@@ -332,9 +355,7 @@ export default function InventoryScreen() {
       {/* Inventory List */}
       <ScrollView
         style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {items.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -346,7 +367,7 @@ export default function InventoryScreen() {
           </View>
         ) : (
           Object.entries(groupedItems).map(([category, categoryItems]) =>
-            renderCategorySection(category, categoryItems as any[])
+            renderCategorySection(category, categoryItems as any[]),
           )
         )}
       </ScrollView>
@@ -387,11 +408,7 @@ export default function InventoryScreen() {
         onPress={() => setShowFabMenu(!showFabMenu)}
         activeOpacity={0.8}
       >
-        <Ionicons 
-          name={showFabMenu ? "close" : "add"} 
-          size={32} 
-          color="#FFF" 
-        />
+        <Ionicons name={showFabMenu ? 'close' : 'add'} size={32} color="#FFF" />
       </TouchableOpacity>
 
       {/* Manual Add Modal */}
@@ -541,17 +558,17 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#000',
+    backgroundColor: '#FF6B35',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#FF6B35',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
   fabActive: {
-    backgroundColor: '#333',
+    backgroundColor: '#E85A2A',
   },
   fabMenu: {
     position: 'absolute',
@@ -569,17 +586,17 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#000',
+    backgroundColor: '#FF6B35',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#FF6B35',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
   },
   fabMenuText: {
-    backgroundColor: '#000',
+    backgroundColor: '#FF6B35',
     color: '#FFF',
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -637,7 +654,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   categoryChipActive: {
-    backgroundColor: '#000',
+    backgroundColor: '#FF6B35',
   },
   categoryChipText: {
     fontSize: 14,
@@ -648,9 +665,9 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   addButton: {
-    backgroundColor: '#000',
+    backgroundColor: '#FF6B35',
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
   },
   addButtonText: {

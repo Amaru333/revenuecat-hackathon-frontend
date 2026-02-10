@@ -1127,7 +1127,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   tabActive: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#FFF3ED',
   },
   tabLabel: {
     fontSize: 14,
@@ -1135,10 +1135,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_600SemiBold',
   },
   tabLabelActive: {
-    color: '#000',
+    color: '#FF6B35',
   },
   badge: {
-    backgroundColor: '#000',
+    backgroundColor: '#FF6B35',
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 1,
@@ -1175,7 +1175,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#000',
+    backgroundColor: '#FF6B35',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -1334,7 +1334,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#000',
+    backgroundColor: '#FF6B35',
     paddingVertical: 14,
     borderRadius: 12,
     marginTop: 16,
@@ -1410,7 +1410,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#000',
+    backgroundColor: '#FF6B35',
     paddingVertical: 10,
     borderRadius: 8,
   },

@@ -1,5 +1,12 @@
 import React from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRevenueCat } from '@/contexts/RevenueCatContext';
@@ -29,9 +36,7 @@ export default function ProfileScreen() {
           <Ionicons name="person" size={60} color="#FFFFFF" />
         </View>
         <View style={styles.nameContainer}>
-          <Text style={styles.name}>
-            {user?.username || 'User'}
-          </Text>
+          <Text style={styles.name}>{user?.username || 'User'}</Text>
           {isPro && (
             <View style={styles.proBadge}>
               <Ionicons name="star" size={14} color="#FFD700" />
@@ -39,15 +44,13 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
-        <Text style={styles.email}>
-          {user?.email || 'user@example.com'}
-        </Text>
+        <Text style={styles.email}>{user?.email || 'user@example.com'}</Text>
       </View>
 
       {/* Subscription Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Subscription</Text>
-        
+
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color="#000" />
@@ -57,7 +60,7 @@ export default function ProfileScreen() {
             <View style={styles.subscriptionCard}>
               <View style={styles.subscriptionHeader}>
                 <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-                <Text style={styles.subscriptionTitle}>Byte to bite Pro</Text>
+                <Text style={styles.subscriptionTitle}>Bytes Pro</Text>
               </View>
               <Text style={styles.subscriptionDescription}>
                 You have access to all premium features
@@ -68,7 +71,7 @@ export default function ProfileScreen() {
                 </Text>
               )}
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.manageButton}
               onPress={handleManageSubscription}
               activeOpacity={0.7}
@@ -89,7 +92,7 @@ export default function ProfileScreen() {
                 Upgrade to Pro for unlimited recipes and premium features
               </Text>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.upgradeButton}
               onPress={handleUpgradeToPro}
               activeOpacity={0.8}
@@ -103,29 +106,20 @@ export default function ProfileScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Settings</Text>
-        
-        <TouchableOpacity 
-          style={styles.menuItem}
-          activeOpacity={0.7}
-        >
+
+        <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
           <Ionicons name="notifications-outline" size={24} color="#666" />
           <Text style={styles.menuText}>Notifications</Text>
           <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.menuItem}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
           <Ionicons name="heart-outline" size={24} color="#666" />
           <Text style={styles.menuText}>Favorites</Text>
           <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.menuItem}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
           <Ionicons name="settings-outline" size={24} color="#666" />
           <Text style={styles.menuText}>Preferences</Text>
           <Ionicons name="chevron-forward" size={24} color="#999" />
@@ -134,39 +128,27 @@ export default function ProfileScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>About</Text>
-        
-        <TouchableOpacity 
-          style={styles.menuItem}
-          activeOpacity={0.7}
-        >
+
+        <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
           <Ionicons name="help-circle-outline" size={24} color="#666" />
           <Text style={styles.menuText}>Help & Support</Text>
           <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.menuItem}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
           <Ionicons name="information-circle-outline" size={24} color="#666" />
-          <Text style={styles.menuText}>About FlavorFinder</Text>
+          <Text style={styles.menuText}>About Bytes</Text>
           <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity 
-        style={styles.logoutButton}
-        onPress={handleLogout}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="log-out-outline" size={24} color="#FFFFFF" />
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
+        <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
 
       <View style={styles.footer}>
-        <Text style={styles.version}>
-          Version 1.0.0
-        </Text>
+        <Text style={styles.version}>Version 1.0.0</Text>
       </View>
     </ScrollView>
   );
@@ -179,19 +161,24 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingTop: 60,
+    paddingTop: 10,
     paddingBottom: 30,
     paddingHorizontal: 20,
     backgroundColor: '#F5F5F5',
   },
   avatarContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
-    backgroundColor: '#000',
+    backgroundColor: '#FF6B35',
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   nameContainer: {
     flexDirection: 'row',
@@ -277,8 +264,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: '#000',
+    borderRadius: 14,
+    backgroundColor: '#FF6B35',
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   upgradeButtonText: {
     color: '#FFFFFF',
@@ -323,14 +315,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: 20,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     gap: 8,
     marginBottom: 20,
-    backgroundColor: '#000',
+    backgroundColor: '#FFF',
+    borderWidth: 1.5,
+    borderColor: '#FF3B30',
   },
   logoutText: {
-    color: '#FFFFFF',
-    fontSize: 18,
+    color: '#FF3B30',
+    fontSize: 16,
     fontWeight: '600',
     fontFamily: 'Poppins_600SemiBold',
   },

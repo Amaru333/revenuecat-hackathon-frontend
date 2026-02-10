@@ -25,7 +25,7 @@ export default function CookHistoryScreen() {
 
   const fetchHistory = useCallback(async () => {
     if (!token) return;
-    
+
     try {
       const data = await getCookHistory(token);
       setCookLogs(data.cookLogs);
@@ -41,7 +41,7 @@ export default function CookHistoryScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchHistory();
-    }, [fetchHistory])
+    }, [fetchHistory]),
   );
 
   const onRefresh = () => {
@@ -53,15 +53,15 @@ export default function CookHistoryScreen() {
     const date = new Date(dateString);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
-    
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
     });
   };
 
@@ -90,7 +90,7 @@ export default function CookHistoryScreen() {
           // Navigate to recipe - would need to fetch full recipe
           router.push({
             pathname: '/(drawer)/recipe-result',
-            params: { recipe: JSON.stringify({ id: log.recipe.id, name: log.recipe.name }) }
+            params: { recipe: JSON.stringify({ id: log.recipe.id, name: log.recipe.name }) },
           });
         }
       }}
@@ -113,7 +113,7 @@ export default function CookHistoryScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#000" />
+        <ActivityIndicator size="large" color="#FF6B35" />
       </View>
     );
   }
@@ -139,9 +139,7 @@ export default function CookHistoryScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {cookLogs.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -188,8 +186,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   statBox: {
@@ -199,8 +197,8 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#000',
-    fontFamily: 'Poppins_700Bold',
+    color: '#FF6B35',
+    fontFamily: 'Poppins_600SemiBold',
   },
   statLabel: {
     fontSize: 14,
@@ -294,7 +292,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#000',
+    backgroundColor: '#FF6B35',
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,

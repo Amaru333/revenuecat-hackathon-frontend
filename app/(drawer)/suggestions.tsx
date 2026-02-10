@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,9 +7,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSuggestionsFromInventory, Recipe } from '@/services/recipeService';
 
@@ -17,30 +18,43 @@ export default function SuggestionsScreen() {
   const { token } = useAuth();
   const [suggestions, setSuggestions] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchSuggestions();
-  }, []);
+  const fetchSuggestions = useCallback(
+    async (isRefreshing = false) => {
+      if (!token) {
+        setError('Please log in to view suggestions');
+        setLoading(false);
+        return;
+      }
 
-  const fetchSuggestions = async () => {
-    if (!token) {
-      setError('Please log in to view suggestions');
-      setLoading(false);
-      return;
-    }
+      try {
+        if (!isRefreshing) setLoading(true);
+        setError(null);
+        const recipes = await getSuggestionsFromInventory(token);
+        setSuggestions(recipes);
+      } catch (err: any) {
+        console.error('Failed to fetch suggestions:', err);
+        setError(err.message || 'Failed to load recipe suggestions');
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [token],
+  );
 
-    try {
-      setLoading(true);
-      setError(null);
-      const recipes = await getSuggestionsFromInventory(token);
-      setSuggestions(recipes);
-    } catch (err: any) {
-      console.error('Failed to fetch suggestions:', err);
-      setError(err.message || 'Failed to load recipe suggestions');
-    } finally {
-      setLoading(false);
-    }
+  // Refresh suggestions every time the screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      fetchSuggestions();
+    }, [fetchSuggestions]),
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchSuggestions(true);
   };
 
   const handleRecipePress = (recipe: Recipe) => {
@@ -55,7 +69,7 @@ export default function SuggestionsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#000" />
+        <ActivityIndicator size="large" color="#FF6B35" />
         <Text style={styles.loadingText}>Generating recipe suggestions...</Text>
       </View>
     );
@@ -67,13 +81,10 @@ export default function SuggestionsScreen() {
         <Ionicons name="alert-circle-outline" size={80} color="#FF3B30" />
         <Text style={styles.errorTitle}>Oops!</Text>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchSuggestions}>
+        <TouchableOpacity style={styles.retryButton} onPress={() => fetchSuggestions()}>
           <Text style={styles.retryButtonText}>Try Again</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -88,8 +99,8 @@ export default function SuggestionsScreen() {
         <Text style={styles.emptyText}>
           Add items to your inventory to get personalized recipe suggestions!
         </Text>
-        <TouchableOpacity 
-          style={styles.inventoryButton} 
+        <TouchableOpacity
+          style={styles.inventoryButton}
           onPress={() => router.push('/(drawer)/inventory')}
         >
           <Text style={styles.inventoryButtonText}>Go to Inventory</Text>
@@ -100,14 +111,16 @@ export default function SuggestionsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         <View style={styles.header}>
-          <Ionicons name="sparkles" size={28} color="#000" />
+          <Ionicons name="sparkles" size={28} color="#FF6B35" />
           <Text style={styles.headerTitle}>Recipe Suggestions</Text>
         </View>
-        <Text style={styles.headerSubtitle}>
-          Based on your inventory items
-        </Text>
+        <Text style={styles.headerSubtitle}>Based on your inventory items</Text>
 
         {suggestions.map((recipe, index) => (
           <TouchableOpacity
@@ -120,7 +133,7 @@ export default function SuggestionsScreen() {
               <Text style={styles.recipeName}>{recipe.name}</Text>
               <Ionicons name="chevron-forward" size={24} color="#666" />
             </View>
-            
+
             <Text style={styles.recipeDescription} numberOfLines={2}>
               {recipe.description}
             </Text>
@@ -128,21 +141,15 @@ export default function SuggestionsScreen() {
             <View style={styles.recipeMetaContainer}>
               <View style={styles.recipeMeta}>
                 <Ionicons name="time-outline" size={16} color="#666" />
-                <Text style={styles.recipeMetaText}>
-                  {recipe.prepTime} prep
-                </Text>
+                <Text style={styles.recipeMetaText}>{recipe.prepTime} prep</Text>
               </View>
               <View style={styles.recipeMeta}>
                 <Ionicons name="flame-outline" size={16} color="#666" />
-                <Text style={styles.recipeMetaText}>
-                  {recipe.cookTime} cook
-                </Text>
+                <Text style={styles.recipeMetaText}>{recipe.cookTime} cook</Text>
               </View>
               <View style={styles.recipeMeta}>
                 <Ionicons name="people-outline" size={16} color="#666" />
-                <Text style={styles.recipeMetaText}>
-                  {recipe.servings} servings
-                </Text>
+                <Text style={styles.recipeMetaText}>{recipe.servings} servings</Text>
               </View>
             </View>
 
@@ -200,10 +207,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
   },
   retryButton: {
-    backgroundColor: '#000',
-    paddingVertical: 12,
+    backgroundColor: '#FF6B35',
+    paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 8,
+    borderRadius: 12,
     marginBottom: 12,
   },
   retryButtonText: {
@@ -244,10 +251,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
   },
   inventoryButton: {
-    backgroundColor: '#000',
-    paddingVertical: 12,
+    backgroundColor: '#FF6B35',
+    paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   inventoryButtonText: {
     color: '#FFF',
@@ -327,9 +334,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_400Regular',
   },
   ingredientsPreview: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFF8F5',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FFE8DE',
   },
   ingredientsLabel: {
     fontSize: 12,
