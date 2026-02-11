@@ -13,11 +13,11 @@ export const initializeRevenueCat = async (): Promise<void> => {
       return;
     }
 
-    // Get Android API key
-    const apiKey = REVENUECAT_CONFIG.apiKeys.android;
+    // Use apiKey getter so Test Store key is used when EXPO_PUBLIC_REVENUECAT_USE_TEST_STORE=true
+    const apiKey = REVENUECAT_CONFIG.apiKey;
 
     // Check if API key is still placeholder
-    if (apiKey.includes('XXXXXXX')) {
+    if (!apiKey || apiKey.includes('XXXXXXX')) {
       console.warn('⚠️ RevenueCat API key not configured. Please update config/revenuecat.ts with your actual API key.');
       return;
     }
@@ -27,7 +27,8 @@ export const initializeRevenueCat = async (): Promise<void> => {
       apiKey: apiKey,
     });
 
-    console.log('✅ RevenueCat SDK initialized successfully (Android)');
+    const mode = REVENUECAT_CONFIG.useTestStore ? 'Test Store (no real payments)' : 'Android';
+    console.log(`✅ RevenueCat SDK initialized successfully (${mode})`);
   } catch (error) {
     console.error('❌ Failed to initialize RevenueCat:', error);
     throw error;

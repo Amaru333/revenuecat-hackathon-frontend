@@ -1,11 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { CustomerInfo } from 'react-native-purchases';
-import { Platform, Alert } from 'react-native';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import Purchases, { CustomerInfo, CustomerInfoUpdateListener } from 'react-native-purchases';
+import { Platform, Alert, AppState, AppStateStatus } from 'react-native';
 import RevenueCatUI from 'react-native-purchases-ui';
+import { REVENUECAT_CONFIG } from '@/config/revenuecat';
 import {
   getCustomerInfo,
-  hasProEntitlement,
-  getSubscriptionStatus as getRCSubscriptionStatus,
   restorePurchases,
   setRevenueCatUserId,
 } from '@/services/subscriptionService';
@@ -50,6 +49,63 @@ export const useRevenueCat = () => {
   return context;
 };
 
+/**
+ * Check pro status directly from CustomerInfo (no extra SDK call)
+ */
+function checkProFromCustomerInfo(info: CustomerInfo | null): boolean {
+  if (!info) return false;
+
+  const entitlementId = REVENUECAT_CONFIG.entitlementId;
+  const entitlement = info.entitlements.active[entitlementId];
+
+  if (entitlement != null) {
+    return true;
+  }
+
+  // Fallback: check if there are ANY active entitlements (in case of entitlement ID mismatch)
+  const activeKeys = Object.keys(info.entitlements.active);
+  if (activeKeys.length > 0) {
+    console.warn(
+      `[RevenueCat] No entitlement found for "${entitlementId}", but found active entitlements: ${activeKeys.join(', ')}. ` +
+      `Check that your entitlement ID in config/revenuecat.ts matches the one in RevenueCat Dashboard.`
+    );
+    return true; // Grant pro if any entitlement is active (graceful handling)
+  }
+
+  return false;
+}
+
+/**
+ * Extract subscription details from CustomerInfo
+ */
+function getStatusFromCustomerInfo(info: CustomerInfo | null): SubscriptionStatus {
+  if (!info) {
+    return { isPro: false, expirationDate: null, willRenew: false, productIdentifier: null };
+  }
+
+  const entitlementId = REVENUECAT_CONFIG.entitlementId;
+  let entitlement = info.entitlements.active[entitlementId];
+
+  // Fallback: use first active entitlement if configured ID doesn't match
+  if (!entitlement) {
+    const activeKeys = Object.keys(info.entitlements.active);
+    if (activeKeys.length > 0) {
+      entitlement = info.entitlements.active[activeKeys[0]];
+    }
+  }
+
+  if (!entitlement) {
+    return { isPro: false, expirationDate: null, willRenew: false, productIdentifier: null };
+  }
+
+  return {
+    isPro: true,
+    expirationDate: entitlement.expirationDate,
+    willRenew: entitlement.willRenew,
+    productIdentifier: entitlement.productIdentifier,
+  };
+}
+
 interface RevenueCatProviderProps {
   children: ReactNode;
 }
@@ -68,137 +124,159 @@ export const RevenueCatProvider: React.FC<RevenueCatProviderProps> = ({ children
   const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Sync subscription status with backend
+  // Use refs to always have latest token/isPro without stale closures
+  const tokenRef = useRef(token);
+  const isProRef = useRef(isPro);
+  useEffect(() => { tokenRef.current = token; }, [token]);
+  useEffect(() => { isProRef.current = isPro; }, [isPro]);
+
+  // Sync subscription status with backend (uses ref so never stale)
   const syncWithBackend = useCallback(async (status: SubscriptionStatus) => {
-    if (!token) return;
+    const currentToken = tokenRef.current;
+    if (!currentToken) {
+      console.log('[RevenueCat] Skipping backend sync - no token yet');
+      return;
+    }
 
     try {
-      await syncSubscriptionWithBackend(token, {
+      console.log('[RevenueCat] Syncing with backend:', { isPro: status.isPro, product: status.productIdentifier });
+      await syncSubscriptionWithBackend(currentToken, {
         isPro: status.isPro,
         productIdentifier: status.productIdentifier,
         expirationDate: status.expirationDate,
       });
+      console.log('[RevenueCat] Backend sync complete');
     } catch (error) {
-      console.error('Failed to sync subscription with backend:', error);
+      console.error('[RevenueCat] Failed to sync with backend:', error);
     }
-  }, [token]);
+  }, []);
 
   // Refresh usage data from backend
   const refreshUsage = useCallback(async () => {
-    if (!token) return;
+    const currentToken = tokenRef.current;
+    if (!currentToken) return;
 
     try {
-      const response = await getBackendSubscriptionStatus(token);
+      const response = await getBackendSubscriptionStatus(currentToken);
       if (response.success) {
         setSubscriptionInfo(response.subscription);
         setUsage(response.usage);
 
-        // If backend says user is Pro (e.g. from webhook), update local state
-        if (response.subscription.isPro && !isPro) {
+        // If backend says user is Pro (e.g. from webhook or test-toggle), update local state
+        if (response.subscription.isPro && !isProRef.current) {
+          console.log('[RevenueCat] Backend says Pro - updating local state');
           setIsPro(true);
         }
       }
     } catch (error) {
-      console.error('Failed to refresh usage:', error);
+      console.error('[RevenueCat] Failed to refresh usage:', error);
     }
-  }, [token, isPro]);
+  }, []);
+
+  // Process customer info from any source (SDK call, listener, etc.)
+  const processCustomerInfo = useCallback(async (info: CustomerInfo) => {
+    setCustomerInfo(info);
+
+    const proStatus = checkProFromCustomerInfo(info);
+    const status = getStatusFromCustomerInfo(info);
+
+    console.log('[RevenueCat] Customer info processed:', {
+      isPro: proStatus,
+      activeEntitlements: Object.keys(info.entitlements.active),
+      product: status.productIdentifier,
+    });
+
+    setIsPro(proStatus);
+    setSubscriptionStatus(status);
+
+    // Sync with backend
+    await syncWithBackend(status);
+
+    // Refresh usage from backend
+    await refreshUsage();
+  }, [syncWithBackend, refreshUsage]);
 
   // Initialize and fetch customer info
-  const refreshCustomerInfo = async () => {
-    // Skip on iOS (Android only)
+  const refreshCustomerInfo = useCallback(async () => {
+    // Skip RevenueCat SDK on iOS (Android only)
     if (Platform.OS === 'ios') {
       setIsLoading(false);
-      // Still fetch backend status on iOS
-      if (token) {
-        await refreshUsage();
-      }
+      await refreshUsage();
       return;
     }
 
     try {
       setIsLoading(true);
-      
+
       // Set user ID if logged in
       if (user?.id) {
         await setRevenueCatUserId(user.id.toString());
       }
 
-      // Get customer info
+      // Get customer info from RevenueCat
       const info = await getCustomerInfo();
-      setCustomerInfo(info);
-
-      // Check Pro status
-      const proStatus = await hasProEntitlement();
-      setIsPro(proStatus);
-
-      // Get subscription details
-      const status = await getRCSubscriptionStatus();
-      setSubscriptionStatus(status);
-
-      // Sync with backend
-      await syncWithBackend(status);
-
-      // Fetch usage data from backend
-      if (token) {
+      if (info) {
+        await processCustomerInfo(info);
+      } else {
+        console.warn('[RevenueCat] No customer info returned');
+        // Still try backend as fallback
         await refreshUsage();
       }
     } catch (error) {
-      console.error('Failed to refresh customer info:', error);
+      console.error('[RevenueCat] Failed to refresh customer info:', error);
+      // Try backend as fallback
+      await refreshUsage();
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.id, processCustomerInfo, refreshUsage]);
 
   // Show paywall
-  const showPaywall = async () => {
-    // Skip on iOS
+  const showPaywall = useCallback(async () => {
     if (Platform.OS === 'ios') {
-      console.log('Paywall not available on iOS (Android only)');
+      console.log('[RevenueCat] Paywall not available on iOS');
       return;
     }
 
     try {
       const paywallResult = await RevenueCatUI.presentPaywall();
-      
-      // Refresh customer info after purchase
-      if (paywallResult === RevenueCatUI.PAYWALL_RESULT.PURCHASED || 
-          paywallResult === RevenueCatUI.PAYWALL_RESULT.RESTORED) {
-        await refreshCustomerInfo();
-      }
+
+      console.log('[RevenueCat] Paywall result:', paywallResult);
+
+      // Refresh customer info after any interaction (purchase, restore, or cancel)
+      // because the user might have subscribed outside the paywall flow
+      await refreshCustomerInfo();
     } catch (error) {
-      console.error('Failed to show paywall:', error);
+      console.error('[RevenueCat] Failed to show paywall:', error);
     }
-  };
+  }, [refreshCustomerInfo]);
 
   // Show customer center
-  const showCustomerCenter = async () => {
-    // Skip on iOS
+  const showCustomerCenter = useCallback(async () => {
     if (Platform.OS === 'ios') {
-      console.log('Customer center not available on iOS (Android only)');
+      console.log('[RevenueCat] Customer center not available on iOS');
       return;
     }
 
     try {
       await RevenueCatUI.presentCustomerCenter();
-      // Refresh after customer center closes
       await refreshCustomerInfo();
     } catch (error) {
-      console.error('Failed to show customer center:', error);
+      console.error('[RevenueCat] Failed to show customer center:', error);
     }
-  };
+  }, [refreshCustomerInfo]);
 
   // Restore purchases
-  const handleRestorePurchases = async () => {
+  const handleRestorePurchases = useCallback(async () => {
     try {
       const info = await restorePurchases();
       if (info) {
-        setCustomerInfo(info);
-        await refreshCustomerInfo();
+        await processCustomerInfo(info);
       }
     } catch (error) {
-      console.error('Failed to restore purchases:', error);
+      console.error('[RevenueCat] Failed to restore purchases:', error);
     }
-  };
+  }, [processCustomerInfo]);
 
   // Show upgrade prompt when user hits a limit
   const showUpgradePrompt = useCallback((feature?: string) => {
@@ -215,26 +293,24 @@ export const RevenueCatProvider: React.FC<RevenueCatProviderProps> = ({ children
         },
       ],
     );
-  }, []);
+  }, [showPaywall]);
 
   // Check if user can use a feature (based on cached usage data)
   const canUseFeature = useCallback((action: string): { allowed: boolean; current: number; limit: number; remaining: number } => {
-    if (isPro) {
+    if (isProRef.current) {
       return { allowed: true, current: 0, limit: -1, remaining: -1 };
     }
 
     if (!usage) {
-      return { allowed: true, current: 0, limit: -1, remaining: -1 }; // Allow if usage hasn't loaded yet
+      return { allowed: true, current: 0, limit: -1, remaining: -1 };
     }
 
-    // Check daily limits
     const dailyActions = ['recipe_generation', 'inventory_scan', 'recipe_suggestion'];
     if (dailyActions.includes(action)) {
       const info = (usage.daily as any)[action];
       if (info) return info;
     }
 
-    // Check total limits
     const totalActions = ['cookbook_upload', 'saved_recipes', 'shopping_lists'];
     if (totalActions.includes(action)) {
       const info = (usage.total as any)[action];
@@ -242,14 +318,43 @@ export const RevenueCatProvider: React.FC<RevenueCatProviderProps> = ({ children
     }
 
     return { allowed: true, current: 0, limit: -1, remaining: -1 };
-  }, [isPro, usage]);
+  }, [usage]);
 
-  // Load customer info on mount and when user changes
+  // === SDK Listener: React to real-time subscription changes ===
+  useEffect(() => {
+    if (Platform.OS === 'ios') return;
+
+    const listener: CustomerInfoUpdateListener = (info: CustomerInfo) => {
+      console.log('[RevenueCat] SDK listener: customer info updated');
+      processCustomerInfo(info);
+    };
+
+    Purchases.addCustomerInfoUpdateListener(listener);
+
+    return () => {
+      Purchases.removeCustomerInfoUpdateListener(listener);
+    };
+  }, [processCustomerInfo]);
+
+  // === AppState Listener: Re-check when app comes to foreground ===
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        console.log('[RevenueCat] App came to foreground - refreshing subscription');
+        refreshCustomerInfo();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, [refreshCustomerInfo]);
+
+  // === Load on mount and when user changes ===
   useEffect(() => {
     refreshCustomerInfo();
-  }, [user?.id]);
+  }, [user?.id, token]);
 
-  // Refresh usage periodically (every 60 seconds when app is active)
+  // Refresh usage periodically (every 60 seconds)
   useEffect(() => {
     if (!token) return;
 
