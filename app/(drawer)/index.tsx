@@ -16,9 +16,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { uploadMediaForRecipe, generateRecipeFromText } from '@/services/recipeService';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRevenueCat } from '@/contexts/RevenueCatContext';
+import { isUsageLimitError } from '@/services/subscriptionApiService';
 
 export default function UploadScreen() {
   const { user, token } = useAuth();
+  const { isPro, canUseFeature, showUpgradePrompt, refreshUsage } = useRevenueCat();
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -153,16 +156,26 @@ export default function UploadScreen() {
 
     if (!uri || !mediaTypeToUse) return;
 
+    // Check usage limit before uploading
+    const featureCheck = canUseFeature('recipe_generation');
+    if (!featureCheck.allowed) {
+      showUpgradePrompt('recipe analysis');
+      return;
+    }
+
     console.log('🚀 Starting upload...', { uri: uri.substring(0, 50), type: mediaTypeToUse });
     setIsUploading(true);
 
     try {
       console.log('📤 Calling uploadMediaForRecipe API...');
-      const response = await uploadMediaForRecipe(uri, mediaTypeToUse, user?.id);
+      const response = await uploadMediaForRecipe(uri, mediaTypeToUse, user?.id, token || undefined);
       console.log('📥 API Response:', response);
 
       if (response.success && response.recipe) {
         console.log('✅ Recipe received:', response.recipe.name);
+
+        // Refresh usage after successful generation
+        refreshUsage();
 
         // Navigate to recipe results page
         router.push({
@@ -180,9 +193,13 @@ export default function UploadScreen() {
         console.log('❌ API returned error:', response.message);
         Alert.alert('Error', response.message || 'Failed to analyze media.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('💥 Upload error:', error);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      if (isUsageLimitError(error)) {
+        showUpgradePrompt('recipe analysis');
+      } else {
+        Alert.alert('Error', 'Something went wrong. Please try again.');
+      }
     } finally {
       setIsUploading(false);
       console.log('✅ Upload complete');
@@ -201,6 +218,13 @@ export default function UploadScreen() {
       return;
     }
 
+    // Check usage limit before generating
+    const featureCheck = canUseFeature('recipe_generation');
+    if (!featureCheck.allowed) {
+      showUpgradePrompt('recipe generation');
+      return;
+    }
+
     console.log('🚀 Starting text-based recipe generation...', { description: mealDescription });
     setIsUploading(true);
 
@@ -211,6 +235,9 @@ export default function UploadScreen() {
 
       if (response.success && response.recipe) {
         console.log('✅ Recipe received:', response.recipe.name);
+
+        // Refresh usage after successful generation
+        refreshUsage();
 
         // Navigate to recipe results page using replace to ensure fresh state
         router.replace({
@@ -226,14 +253,21 @@ export default function UploadScreen() {
         console.log('❌ API returned error:', response.message);
         Alert.alert('Error', response.message || 'Failed to generate recipe.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('💥 Text generation error:', error);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      if (isUsageLimitError(error)) {
+        showUpgradePrompt('recipe generation');
+      } else {
+        Alert.alert('Error', 'Something went wrong. Please try again.');
+      }
     } finally {
       setIsUploading(false);
       console.log('✅ Text generation complete');
     }
   };
+
+  // Get usage info for display
+  const recipeUsage = canUseFeature('recipe_generation');
 
   return (
     <View style={[styles.container, { backgroundColor: '#F5F5F5' }]}>
@@ -247,6 +281,38 @@ export default function UploadScreen() {
         </View>
         <Text style={styles.title}>What are you cooking?</Text>
         <Text style={styles.subtitle}>Snap a photo, upload a cookbook, or describe a dish</Text>
+
+        {/* Usage Badge */}
+        {!isPro && recipeUsage.limit > 0 && (
+          <TouchableOpacity
+            style={[
+              styles.usageBadge,
+              recipeUsage.remaining === 0 && styles.usageBadgeExhausted,
+            ]}
+            onPress={() => recipeUsage.remaining === 0 ? showUpgradePrompt('recipe generation') : null}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name={recipeUsage.remaining > 0 ? 'flash' : 'lock-closed'}
+              size={14}
+              color={recipeUsage.remaining > 0 ? '#FF6B35' : '#FF3B30'}
+            />
+            <Text style={[
+              styles.usageBadgeText,
+              recipeUsage.remaining === 0 && styles.usageBadgeTextExhausted,
+            ]}>
+              {recipeUsage.remaining > 0
+                ? `${recipeUsage.remaining}/${recipeUsage.limit} recipes left today`
+                : 'Daily limit reached - Upgrade'}
+            </Text>
+          </TouchableOpacity>
+        )}
+        {isPro && (
+          <View style={styles.proBadgeHome}>
+            <Ionicons name="star" size={14} color="#FFD700" />
+            <Text style={styles.proBadgeHomeText}>Pro - Unlimited</Text>
+          </View>
+        )}
       </View>
 
       <KeyboardAvoidingView
@@ -470,5 +536,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     fontFamily: 'Poppins_400Regular',
+  },
+  usageBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#FFF3ED',
+    borderWidth: 1,
+    borderColor: '#FFD5C2',
+  },
+  usageBadgeExhausted: {
+    backgroundColor: '#FFF0F0',
+    borderColor: '#FFCDD2',
+  },
+  usageBadgeText: {
+    fontSize: 13,
+    color: '#FF6B35',
+    fontFamily: 'Poppins_500Medium',
+  },
+  usageBadgeTextExhausted: {
+    color: '#FF3B30',
+  },
+  proBadgeHome: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#1A1A1A',
+  },
+  proBadgeHomeText: {
+    fontSize: 13,
+    color: '#FFD700',
+    fontFamily: 'Poppins_600SemiBold',
   },
 });

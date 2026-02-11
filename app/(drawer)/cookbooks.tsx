@@ -13,6 +13,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRevenueCat } from '@/contexts/RevenueCatContext';
+import { isUsageLimitError } from '@/services/subscriptionApiService';
 import * as DocumentPicker from 'expo-document-picker';
 import { readAsStringAsync } from 'expo-file-system/legacy';
 import {
@@ -24,6 +26,7 @@ import {
 
 export default function CookbooksScreen() {
   const { token } = useAuth();
+  const { canUseFeature, showUpgradePrompt, refreshUsage } = useRevenueCat();
   const [cookbooks, setCookbooks] = useState<Cookbook[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -64,6 +67,13 @@ export default function CookbooksScreen() {
   const handleUpload = async () => {
     if (!token) {
       Alert.alert('Authentication Required', 'Please log in to upload cookbooks.');
+      return;
+    }
+
+    // Check cookbook upload limit
+    const featureCheck = canUseFeature('cookbook_upload');
+    if (!featureCheck.allowed) {
+      showUpgradePrompt('cookbook uploads');
       return;
     }
 
@@ -114,14 +124,19 @@ export default function CookbooksScreen() {
       const result = await uploadCookbook(base64Data, name, token!);
 
       Alert.alert(
-        'Success! 🎉',
+        'Success!',
         `"${result.cookbook.name}" uploaded with ${result.cookbook.recipes.length} recipes extracted!`,
       );
 
+      refreshUsage();
       fetchCookbooks();
     } catch (error: any) {
       console.error('Upload error:', error);
-      Alert.alert('Upload Failed', error.message || 'Failed to upload cookbook.');
+      if (isUsageLimitError(error)) {
+        showUpgradePrompt('cookbook uploads');
+      } else {
+        Alert.alert('Upload Failed', error.message || 'Failed to upload cookbook.');
+      }
     } finally {
       setUploading(false);
     }

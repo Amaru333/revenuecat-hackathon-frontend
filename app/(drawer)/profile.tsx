@@ -12,9 +12,50 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRevenueCat } from '@/contexts/RevenueCatContext';
 import { router } from 'expo-router';
 
+function UsageBar({ label, current, limit, icon }: { label: string; current: number; limit: number; icon: string }) {
+  const isUnlimited = limit === -1;
+  const percentage = isUnlimited ? 0 : limit > 0 ? Math.min((current / limit) * 100, 100) : 0;
+  const isExhausted = !isUnlimited && current >= limit;
+
+  return (
+    <View style={usageStyles.barContainer}>
+      <View style={usageStyles.barHeader}>
+        <View style={usageStyles.barLabelRow}>
+          <Ionicons name={icon as any} size={16} color={isExhausted ? '#FF3B30' : '#666'} />
+          <Text style={[usageStyles.barLabel, isExhausted && usageStyles.barLabelExhausted]}>
+            {label}
+          </Text>
+        </View>
+        <Text style={[usageStyles.barCount, isExhausted && usageStyles.barCountExhausted]}>
+          {isUnlimited ? 'Unlimited' : `${current}/${limit}`}
+        </Text>
+      </View>
+      {!isUnlimited && (
+        <View style={usageStyles.barTrack}>
+          <View
+            style={[
+              usageStyles.barFill,
+              { width: `${percentage}%` },
+              isExhausted && usageStyles.barFillExhausted,
+            ]}
+          />
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
-  const { isPro, isLoading, subscriptionStatus, showPaywall, showCustomerCenter } = useRevenueCat();
+  const {
+    isPro,
+    isLoading,
+    subscriptionStatus,
+    usage,
+    showPaywall,
+    showCustomerCenter,
+    canUseFeature,
+  } = useRevenueCat();
 
   const handleLogout = async () => {
     await logout();
@@ -28,6 +69,14 @@ export default function ProfileScreen() {
   const handleManageSubscription = async () => {
     await showCustomerCenter();
   };
+
+  // Get usage info for each feature
+  const recipeGen = canUseFeature('recipe_generation');
+  const invScan = canUseFeature('inventory_scan');
+  const recipeSug = canUseFeature('recipe_suggestion');
+  const cookbookUp = canUseFeature('cookbook_upload');
+  const savedRec = canUseFeature('saved_recipes');
+  const shopLists = canUseFeature('shopping_lists');
 
   return (
     <ScrollView style={styles.container}>
@@ -104,6 +153,73 @@ export default function ProfileScreen() {
         )}
       </View>
 
+      {/* Usage Section */}
+      <View style={styles.section}>
+        <View style={styles.usageSectionHeader}>
+          <Text style={styles.sectionTitle}>Usage</Text>
+          {!isPro && (
+            <View style={styles.tierBadge}>
+              <Text style={styles.tierBadgeText}>FREE</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.usageCard}>
+          <Text style={usageStyles.categoryTitle}>Daily Limits</Text>
+          <UsageBar
+            label="Recipe Generations"
+            current={recipeGen.current}
+            limit={recipeGen.limit}
+            icon="sparkles"
+          />
+          <UsageBar
+            label="Inventory Scans"
+            current={invScan.current}
+            limit={invScan.limit}
+            icon="scan"
+          />
+          <UsageBar
+            label="Recipe Suggestions"
+            current={recipeSug.current}
+            limit={recipeSug.limit}
+            icon="bulb"
+          />
+
+          <View style={usageStyles.divider} />
+
+          <Text style={usageStyles.categoryTitle}>Total Limits</Text>
+          <UsageBar
+            label="Cookbook Uploads"
+            current={cookbookUp.current}
+            limit={cookbookUp.limit}
+            icon="book"
+          />
+          <UsageBar
+            label="Saved Recipes"
+            current={savedRec.current}
+            limit={savedRec.limit}
+            icon="bookmark"
+          />
+          <UsageBar
+            label="Shopping Lists"
+            current={shopLists.current}
+            limit={shopLists.limit}
+            icon="cart"
+          />
+        </View>
+
+        {!isPro && (
+          <TouchableOpacity
+            style={styles.upgradeSmallButton}
+            onPress={handleUpgradeToPro}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-up-circle" size={18} color="#FF6B35" />
+            <Text style={styles.upgradeSmallText}>Remove all limits with Pro</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Settings</Text>
 
@@ -153,6 +269,68 @@ export default function ProfileScreen() {
     </ScrollView>
   );
 }
+
+const usageStyles = StyleSheet.create({
+  categoryTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#999',
+    fontFamily: 'Poppins_600SemiBold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginVertical: 12,
+  },
+  barContainer: {
+    marginBottom: 12,
+  },
+  barHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  barLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  barLabel: {
+    fontSize: 14,
+    color: '#333',
+    fontFamily: 'Poppins_400Regular',
+  },
+  barLabelExhausted: {
+    color: '#FF3B30',
+  },
+  barCount: {
+    fontSize: 13,
+    color: '#666',
+    fontFamily: 'Poppins_500Medium',
+  },
+  barCountExhausted: {
+    color: '#FF3B30',
+    fontWeight: '600',
+  },
+  barTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#F0F0F0',
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: '#FF6B35',
+  },
+  barFillExhausted: {
+    backgroundColor: '#FF3B30',
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -223,6 +401,44 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     color: '#000',
     fontFamily: 'Poppins_600SemiBold',
+  },
+  usageSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 0,
+  },
+  tierBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: '#F0F0F0',
+    marginBottom: 12,
+  },
+  tierBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#999',
+    fontFamily: 'Poppins_600SemiBold',
+    letterSpacing: 0.5,
+  },
+  usageCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 16,
+  },
+  upgradeSmallButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 10,
+    paddingVertical: 10,
+  },
+  upgradeSmallText: {
+    fontSize: 14,
+    color: '#FF6B35',
+    fontFamily: 'Poppins_500Medium',
   },
   loadingContainer: {
     padding: 20,

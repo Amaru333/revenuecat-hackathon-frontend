@@ -38,7 +38,8 @@ export interface UploadMediaResponse {
 export const uploadMediaForRecipe = async (
   mediaUri: string,
   type: 'image' | 'video',
-  userId?: number
+  userId?: number,
+  token?: string
 ): Promise<UploadMediaResponse> => {
   try {
     // Convert image URI to base64
@@ -62,6 +63,13 @@ export const uploadMediaForRecipe = async (
     const mimeType = blob.type || (type === 'image' ? 'image/jpeg' : 'video/mp4');
 
     // Call backend API
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const apiResponse = await axios.post(
       `${API_URL}/recipes/analyze`,
       {
@@ -72,11 +80,7 @@ export const uploadMediaForRecipe = async (
           ? "Analyze this food image and provide a detailed recipe. Include ingredients with measurements and step-by-step instructions."
           : "Analyze this recipe video carefully. Observe all ingredients used, their quantities, and the preparation steps. Provide the full recipe.",
       },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
+      { headers }
     );
 
     if (apiResponse.data.success && apiResponse.data.recipe) {

@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRevenueCat } from '@/contexts/RevenueCatContext';
+import { isUsageLimitError } from '@/services/subscriptionApiService';
 import { getUserRecipes, Recipe } from '@/services/recipeService';
 import {
   generateShoppingList,
@@ -39,6 +41,7 @@ type DetailMode = 'view' | 'add-recipes';
 
 export default function ShoppingListScreen() {
   const { user, token } = useAuth();
+  const { canUseFeature, showUpgradePrompt, refreshUsage } = useRevenueCat();
   const [activeTab, setActiveTab] = useState<Tab>('saved');
   const [savedLists, setSavedLists] = useState<SavedShoppingList[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -164,6 +167,13 @@ export default function ShoppingListScreen() {
       return;
     }
 
+    // Check shopping list limit
+    const featureCheck = canUseFeature('shopping_lists');
+    if (!featureCheck.allowed) {
+      showUpgradePrompt('shopping lists');
+      return;
+    }
+
     setGenerating(true);
     try {
       const list = await generateShoppingList(Array.from(selectedRecipes), token);
@@ -172,11 +182,16 @@ export default function ShoppingListScreen() {
       setSelectedRecipes(new Set());
       // Refresh saved lists since generate auto-saves
       await fetchSavedLists();
+      refreshUsage();
       setActiveTab('saved');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating shopping list:', error);
-      Alert.alert('Error', 'Failed to generate shopping list. Please try again.');
+      if (isUsageLimitError(error)) {
+        showUpgradePrompt('shopping lists');
+      } else {
+        Alert.alert('Error', 'Failed to generate shopping list. Please try again.');
+      }
     } finally {
       setGenerating(false);
     }

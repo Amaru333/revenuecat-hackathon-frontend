@@ -12,14 +12,18 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRevenueCat } from '@/contexts/RevenueCatContext';
 import { getSuggestionsFromInventory, Recipe } from '@/services/recipeService';
+import { isUsageLimitError } from '@/services/subscriptionApiService';
 
 export default function SuggestionsScreen() {
   const { token } = useAuth();
+  const { isPro, canUseFeature, showUpgradePrompt, refreshUsage } = useRevenueCat();
   const [suggestions, setSuggestions] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
 
   const fetchSuggestions = useCallback(
     async (isRefreshing = false) => {
@@ -29,20 +33,36 @@ export default function SuggestionsScreen() {
         return;
       }
 
+      // Check limit before making API call
+      const featureCheck = canUseFeature('recipe_suggestion');
+      if (!featureCheck.allowed) {
+        setLimitReached(true);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       try {
         if (!isRefreshing) setLoading(true);
         setError(null);
+        setLimitReached(false);
         const recipes = await getSuggestionsFromInventory(token);
         setSuggestions(recipes);
+        refreshUsage();
       } catch (err: any) {
         console.error('Failed to fetch suggestions:', err);
-        setError(err.message || 'Failed to load recipe suggestions');
+        if (isUsageLimitError(err)) {
+          setLimitReached(true);
+          setError(null);
+        } else {
+          setError(err.message || 'Failed to load recipe suggestions');
+        }
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [token],
+    [token, canUseFeature, refreshUsage],
   );
 
   // Refresh suggestions every time the screen is focused

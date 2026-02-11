@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRevenueCat } from '@/contexts/RevenueCatContext';
+import { isUsageLimitError } from '@/services/subscriptionApiService';
 import api from '@/services/api';
 
 interface ScannedItem {
@@ -25,6 +27,7 @@ interface ScannedItem {
 
 export default function InventoryScanScreen() {
   const { token } = useAuth();
+  const { canUseFeature, showUpgradePrompt, refreshUsage } = useRevenueCat();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [scanType, setScanType] = useState<'receipt' | 'pantry'>('receipt');
   const [scanning, setScanning] = useState(false);
@@ -33,6 +36,12 @@ export default function InventoryScanScreen() {
   const [confirming, setConfirming] = useState(false);
 
   const pickImage = async (source: 'camera' | 'gallery') => {
+    // Check usage limit before scanning
+    const featureCheck = canUseFeature('inventory_scan');
+    if (!featureCheck.allowed) {
+      showUpgradePrompt('inventory scanning');
+      return;
+    }
     try {
       let result;
       
@@ -94,12 +103,17 @@ export default function InventoryScanScreen() {
 
       setScanId(response.data.scanId);
       setScannedItems(response.data.items);
+      refreshUsage();
     } catch (error: any) {
       console.error('Scan error:', error);
-      Alert.alert(
-        'Scan Failed',
-        error.response?.data?.error || 'Failed to scan image. Please try again.'
-      );
+      if (isUsageLimitError(error)) {
+        showUpgradePrompt('inventory scanning');
+      } else {
+        Alert.alert(
+          'Scan Failed',
+          error.response?.data?.error || 'Failed to scan image. Please try again.'
+        );
+      }
       setSelectedImage(null);
     } finally {
       setScanning(false);
