@@ -15,6 +15,7 @@ const SUB_SCREENS = new Set([
   'paywall',
   'customer-center',
   'cookbook-detail',
+  'meal-plan-detail',
 ]);
 
 // Custom header with hamburger (top-level screens)
@@ -132,6 +133,20 @@ export default function DrawerLayout() {
         name="cookbooks"
         options={{
           drawerLabel: 'Cookbooks',
+        }}
+      />
+      <Drawer.Screen
+        name="meal-prep"
+        options={{
+          drawerLabel: 'Meal Prep',
+        }}
+      />
+      <Drawer.Screen
+        name="meal-plan-detail"
+        options={{
+          drawerLabel: 'Meal Plan Detail',
+          drawerItemStyle: { display: 'none' },
+          header: () => <BackHeader />,
         }}
       />
       <Drawer.Screen

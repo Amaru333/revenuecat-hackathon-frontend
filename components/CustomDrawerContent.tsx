@@ -45,6 +45,12 @@ export default function CustomDrawerContent(props: DrawerContentComponentProps) 
       activeIcon: 'book',
     },
     {
+      name: 'Meal Prep',
+      icon: 'calendar-outline',
+      route: '/(drawer)/meal-prep',
+      activeIcon: 'calendar',
+    },
+    {
       name: 'Favorites',
       icon: 'heart-outline',
       route: '/(drawer)/favorites',
