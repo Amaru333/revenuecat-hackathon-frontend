@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -24,6 +24,7 @@ export default function SuggestionsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [limitReached, setLimitReached] = useState(false);
+  const hasFetched = useRef(false);
 
   const fetchSuggestions = useCallback(
     async (isRefreshing = false) => {
@@ -48,6 +49,7 @@ export default function SuggestionsScreen() {
         setLimitReached(false);
         const recipes = await getSuggestionsFromInventory(token);
         setSuggestions(recipes);
+        // Fire and forget — don't await to avoid re-render triggering refetch
         refreshUsage();
       } catch (err: any) {
         console.error('Failed to fetch suggestions:', err);
@@ -62,13 +64,19 @@ export default function SuggestionsScreen() {
         setRefreshing(false);
       }
     },
-    [token, canUseFeature, refreshUsage],
+    // Only depend on token — canUseFeature and refreshUsage use refs internally
+    // and don't need to trigger re-creation of this callback
+    [token],
   );
 
-  // Refresh suggestions every time the screen is focused
+  // Fetch suggestions when the screen is focused, but only once per focus
   useFocusEffect(
     useCallback(() => {
-      fetchSuggestions();
+      hasFetched.current = false;
+      if (!hasFetched.current) {
+        hasFetched.current = true;
+        fetchSuggestions();
+      }
     }, [fetchSuggestions]),
   );
 
