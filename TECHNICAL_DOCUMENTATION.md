@@ -4,49 +4,8 @@
 
 ### System Components
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         expo-frontend (React Native / Expo)              │
-│  ┌─────────────┐  ┌──────────────────┐  ┌────────────────────────────┐ │
-│  │ AuthContext │  │ RevenueCatContext│  │ Screens: Recipes, Cookbook,  │ │
-│  │ (JWT auth)  │  │ (entitlements,   │  │ Inventory, Meal Prep,       │ │
-│  │             │  │  paywall, usage) │  │ Shopping, Paywall, Profile  │ │
-│  └──────┬──────┘  └────────┬─────────┘  └──────────────┬───────────────┘ │
-│         │                  │                            │                │
-│         │                  │  react-native-purchases    │                │
-│         │                  │  react-native-purchases-ui │                │
-│         ▼                  ▼                            ▼                │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │ Services: authService, recipeService, subscriptionService,         ││
-│  │           subscriptionApiService, cookbookService, etc.              ││
-│  └─────────────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────┬───────────────────────────────────┘
-                                      │ HTTPS (REST)
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         backend (Node.js + Express)                       │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │ Routes: /api/auth, /api/recipes, /api/inventory, /api/shopping,      ││
-│  │         /api/cook-history, /api/cookbooks, /api/subscription,        ││
-│  │         /api/meal-prep                                              ││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│  Middleware: authenticate (JWT), attachSubscriptionInfo,               │
-│              requireDailyLimit(action), requireTotalLimit(action)       │
-│  ┌─────────────┐  ┌──────────────────────────────────────────────────┐ │
-│  │ Controllers │  │ Prisma → PostgreSQL (User, Recipe, Cookbook,      │ │
-│  │             │  │ InventoryItem, UsageLog, MealPlan, etc.)          │ │
-│  └─────────────┘  └──────────────────────────────────────────────────┘ │
-└─────────────────────────────────────┬───────────────────────────────────┘
-                                      │
-        ┌─────────────────────────────┼─────────────────────────────┐
-        ▼                             ▼                             ▼
-┌───────────────┐           ┌─────────────────┐           ┌─────────────────┐
-│ RevenueCat    │           │ External AI     │           │ PostgreSQL      │
-│ (Google Play, │           │ (e.g. Gemini,   │           │ (Prisma ORM)    │
-│  paywall,     │           │  Perplexity)    │           │                 │
-│  webhook)     │           │                 │           │                 │
-└───────────────┘           └─────────────────┘           └─────────────────┘
-```
+<img width="783" height="794" alt="image" src="https://github.com/user-attachments/assets/0ef0c2c2-249f-43f9-86a4-a1961baa1987" />
+
 
 ### Data and Request Flow
 
